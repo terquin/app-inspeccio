@@ -162,7 +162,17 @@
         <div class="text-center font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
             Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
         </div>
-        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 border border-blue-200">
+
+        <!-- Casella per modificar manualment l'índex dels punts (Evita duplicats QGIS) -->
+        <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+            <label for="custom-start-num" class="text-sm font-semibold text-gray-700">Començar numeració pel punt:</label>
+            <div class="flex items-center gap-1">
+                <span class="text-gray-500 font-mono">#</span>
+                <input type="number" id="custom-start-num" min="1" onchange="updateCustomStartNum(this.value)" class="w-16 border border-gray-300 rounded-md p-1.5 text-center font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+        </div>
+
+        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 border border-blue-200 mt-2">
             <i data-lucide="send" class="w-5 h-5"></i> Configurar Bot de Telegram
         </button>
         <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
@@ -306,9 +316,21 @@ const backdrop  = document.getElementById('backdrop');
 const formPanel = document.getElementById('form-panel');
 const toolsPanel= document.getElementById('tools-panel');
 
+// Funció que calcula el proper número, tenint en compte l'ajust manual de l'usuari
 function getNextPointNumber() {
+    const customStart = parseInt(localStorage.getItem('custom_start_num')) || 1;
     const nums = savedPoints.map(f=>f.properties.num_punt).filter(n=>typeof n==='number');
-    return nums.length > 0 ? Math.max(...nums)+1 : 1;
+    const maxSaved = nums.length > 0 ? Math.max(...nums) : 0;
+    return Math.max(customStart, maxSaved + 1);
+}
+
+// Funció per actualitzar l'inici manual (quan s'escriu a la casella de configuració)
+function updateCustomStartNum(val) {
+    const num = parseInt(val);
+    if(!isNaN(num) && num > 0) {
+        localStorage.setItem('custom_start_num', num);
+        showNotification(`El proper punt serà el #${getNextPointNumber()}`, false, true);
+    }
 }
 
 function openFormPanel() {
@@ -320,6 +342,9 @@ function openFormPanel() {
 }
 
 function openToolsPanel() {
+    // Actualitzar la casella visualment al obrir el panell
+    document.getElementById('custom-start-num').value = getNextPointNumber();
+    
     backdrop.classList.remove('hidden');
     setTimeout(()=>toolsPanel.classList.remove('translate-y-full'), 10);
 }
@@ -648,6 +673,23 @@ function downloadBlob(blob,filename){
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
+
+// ─── Exposar funcions globalment pels botons HTML (per evitar errors onchange) ───
+window.updateCustomStartNum = updateCustomStartNum;
+window.openToolsPanel = openToolsPanel;
+window.closeAllPanels = closeAllPanels;
+window.locateUser = locateUser;
+window.openFormPanel = openFormPanel;
+window.updateEstat = updateEstat;
+window.handlePhoto = handlePhoto;
+window.savePoint = savePoint;
+window.openTelegramModal = openTelegramModal;
+window.closeTelegramModalIfConfigured = closeTelegramModalIfConfigured;
+window.saveTelegramConfig = saveTelegramConfig;
+window.exportDataAsZip = exportDataAsZip;
+window.exportGeoJSONonly = exportGeoJSONonly;
+window.importGeoJSON = importGeoJSON;
+window.clearData = clearData;
 
 window.onload = () => {
     initMap();
