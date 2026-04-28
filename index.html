@@ -209,6 +209,11 @@
                 Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
             </div>
 
+            <!-- Botó per obrir la configuració de Telegram manualment -->
+            <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 transition border border-blue-200 shadow-sm">
+                <i data-lucide="send" class="w-5 h-5"></i> Configurar API de Telegram
+            </button>
+
             <!-- Info compatibilitat QGIS -->
             <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
                 <strong>📐 Compatible QGIS:</strong> Les fotos es pugen automàticament a Telegram. El GeoJSON exportat conté les URLs de les fotos. Importa el fitxer <code class="bg-green-100 px-1 rounded">mapa_inspeccions.geojson</code> directament a QGIS.
@@ -248,6 +253,33 @@
         </div>
     </div>
 
+    <!-- PANELL 3: Configuració Segura Telegram (Modal) -->
+    <div id="telegram-modal" class="fixed inset-0 z-[700] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTelegramModalIfConfigured()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-md flex flex-col overflow-hidden transform scale-100 transition-all">
+            <div class="p-5 border-b bg-blue-600 text-white flex justify-between items-center">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="send"></i> Connexió a Telegram</h2>
+            </div>
+            <div class="p-5 flex flex-col gap-4">
+                <p class="text-sm text-gray-600">Per guardar les fotos al núvol de forma segura i que l'App sigui pública a GitHub, introdueix les dades del teu Bot. <br><b>Aquestes dades es guardaran només a la memòria del teu dispositiu.</b></p>
+                <div class="flex flex-col gap-1">
+                    <label class="font-semibold text-gray-700 text-sm">Token del Bot (API Token)</label>
+                    <input type="text" id="tg-token-input" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 123456789:ABCdefGHIjklMNOpqr...">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="font-semibold text-gray-700 text-sm">ID del Xat (Chat ID)</label>
+                    <input type="text" id="tg-chatid-input" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: -100123456789">
+                </div>
+                <button onclick="saveTelegramConfig()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-blue-700 mt-2 shadow-md">
+                    <i data-lucide="save" class="w-5 h-5"></i> Guardar Configuració
+                </button>
+                <button onclick="closeTelegramModalIfConfigured()" class="w-full bg-gray-100 text-gray-600 py-3 rounded-lg font-bold hover:bg-gray-200" id="btn-cancel-tg">
+                    Tancar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
 
@@ -262,6 +294,58 @@
         let db, auth, appId, unsubscribeSnapshot;
         let isCloudSyncActive = false;
 
+        // ─── Variables Segures de Telegram (Guardades al dispositiu) ──
+        let TG_TOKEN = localStorage.getItem('tg_token') || '';
+        let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
+
+        function openTelegramModal() {
+            document.getElementById('tg-token-input').value = TG_TOKEN;
+            document.getElementById('tg-chatid-input').value = TG_CHAT_ID;
+            
+            const modal = document.getElementById('telegram-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Si no hi ha dades, amagar el botó de tancar perquè és obligatori
+            if (!TG_TOKEN || !TG_CHAT_ID) {
+                document.getElementById('btn-cancel-tg').classList.add('hidden');
+            } else {
+                document.getElementById('btn-cancel-tg').classList.remove('hidden');
+            }
+        }
+
+        function closeTelegramModalIfConfigured() {
+            if (!TG_TOKEN || !TG_CHAT_ID) {
+                showNotification("Has d'omplir les dades de Telegram per poder pujar fotos", true);
+            } else {
+                const modal = document.getElementById('telegram-modal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function saveTelegramConfig() {
+            const tokenInput = document.getElementById('tg-token-input').value.trim();
+            const chatInput = document.getElementById('tg-chatid-input').value.trim();
+
+            if (!tokenInput || !chatInput) {
+                showNotification("Si us plau, omple els dos camps", true);
+                return;
+            }
+
+            TG_TOKEN = tokenInput;
+            TG_CHAT_ID = chatInput;
+            
+            localStorage.setItem('tg_token', TG_TOKEN);
+            localStorage.setItem('tg_chat_id', TG_CHAT_ID);
+
+            showNotification("✅ Configuració de Telegram desada al dispositiu!");
+            
+            const modal = document.getElementById('telegram-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
         // ─── Projecció EPSG:25831 (UTM zona 31N) ─────────────────────
         proj4.defs("EPSG:25831", "+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
         function wgs84ToUtm31(lon, lat) {
@@ -269,11 +353,13 @@
             return { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 };
         }
 
-        // ─── Configuració Telegram ────────────────────────────────────
-        const TG_TOKEN   = '8350449694:AAEFT7BxICmQb3s7BbYtRN772_IJpMn2oPM';
-        const TG_CHAT_ID = '-1003974833812';
-
+        // ─── Enviar Foto a Telegram (ara utilitza variables locals) ───
         async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
+            if (!TG_TOKEN || !TG_CHAT_ID) {
+                showNotification("Error: Configura el Bot de Telegram primer (Icona Configuració)", true);
+                return null;
+            }
+
             try {
                 const formData = new FormData();
                 formData.append('chat_id', TG_CHAT_ID);
@@ -422,13 +508,13 @@
             );
         }
 
-        // ─── Processament de foto OPTIMITZAT EXTREM PER A MÒBIL (evita talls de memòria) ────────
+        // ─── Processament de foto OPTIMITZAT EXTREM PER A MÒBIL ────────
         async function handlePhoto(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
 
             const MAX_WIDTH = 800;   
-            const QUALITY   = 0.6;   // Encara més comprimit
+            const QUALITY   = 0.6;   
             const MAX_FOTOS = 5;
 
             const previewContainer = document.getElementById('photo-preview-container');
@@ -446,8 +532,6 @@
                 document.getElementById('photo-label').innerText = `Processant foto ${i + 1} de ${aProcessar}...`;
 
                 try {
-                    // PAUSA VITAL: Permet a l'OS restaurar la memòria després d'obrir l'App de Càmera
-                    // i dóna temps al Garbage Collector a alliberar memòria prèvia.
                     await new Promise(r => setTimeout(r, 400));
 
                     await new Promise((resolve, reject) => {
@@ -455,7 +539,7 @@
                         const img = new Image();
                         
                         img.onload = () => {
-                            URL.revokeObjectURL(objectUrl); // Allibera l'arxiu original a l'instant
+                            URL.revokeObjectURL(objectUrl); 
                             
                             try {
                                 const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
@@ -467,7 +551,6 @@
                                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                                 
                                 canvas.toBlob((blob) => {
-                                    // DESTRUCCIÓ EXTREMA DE MEMÒRIA (Evita col·lapse de RAM)
                                     canvas.width = 1;
                                     canvas.height = 1;
                                     ctx.clearRect(0,0,1,1);
@@ -508,7 +591,7 @@
                 } catch (err) {
                     console.error("Error processant foto:", err);
                     showNotification("La resolució és massa alta per la memòria del navegador. Tanca altres apps.", true);
-                    break; // Parem el bucle per evitar que el navegador peti del tot
+                    break;
                 }
             }
 
@@ -603,7 +686,7 @@
             const estat  = estatR ? estatR.value : '';
             const numPunt = getNextPointNumber();
 
-            // Puja fotos a Telegram directament des dels arxius (Blobs)
+            // Puja fotos a Telegram 
             let telegramUrls = [];
             let telegramIds  = [];
             if (currentPhotosFiles.length > 0) {
@@ -672,7 +755,6 @@
             document.getElementById('tipus').value = '';
             document.getElementById('photoInput').value = '';
             
-            // Neteja profunda d'arxius temporals per no col·lapsar el mòbil
             previewUrls.forEach(url => URL.revokeObjectURL(url));
             previewUrls = [];
             currentPhotosFiles = [];
@@ -967,6 +1049,9 @@
         // Exposar funcions al context global pels botons HTML
         window.openFormPanel = openFormPanel;
         window.openToolsPanel = openToolsPanel;
+        window.openTelegramModal = openTelegramModal;
+        window.closeTelegramModalIfConfigured = closeTelegramModalIfConfigured;
+        window.saveTelegramConfig = saveTelegramConfig;
         window.closeAllPanels = closeAllPanels;
         window.locateUser = locateUser;
         window.handlePhoto = handlePhoto;
@@ -979,7 +1064,12 @@
 
         window.onload = async () => {
             initMap();
-            await initCloud(); // Inicia la connexió al núvol a l'obrir l'app
+            await initCloud();
+            
+            // Si el Telegram no s'ha configurat mai al dispositiu, mostrem la pantalla obligatòriament
+            if (!TG_TOKEN || !TG_CHAT_ID) {
+                setTimeout(() => openTelegramModal(), 500);
+            }
         };
     </script>
 </body>
