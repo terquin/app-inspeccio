@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inspecció de Camp</title>
+
+    <!-- PWA: app completa sense barra de navegador -->
+    <!-- El manifest s'ha integrat directament aquí en format Base64 perquè no necessitis l'arxiu manifest.json separat -->
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiSW5zcGVjY2nDsyBkZSBDYW1wIiwic2hvcnRfbmFtZSI6Ikluc3BlY2Npw7MiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzI1NjNlYiIsInRoZW1lX2NvbG9yIjoiIzI1NjNlYiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL3VwbG9hZC53aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iL2MvYzIvTG9jYXRpb25fbWFya2VyX3Bpbl9yZWQuc3ZnLzE5MnB4LUxvY2F0aW9uX21hcmtlcl9waW5fcmVkLnN2Zy5wbmciLCJzaXplcyI6IjE5MngxOTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn0seyJzcmMiOiJodHRwczovL3VwbG9hZC53aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iL2MvYzIvTG9jYXRpb25fbWFya2VyX3Bpbl9yZWQuc3ZnLzUxMnB4LUxvY2F0aW9uX21hcmtlcl9waW5fcmVkLnN2Zy5wbmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn1dfQ==">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Inspecció">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Location_marker_pin_red.svg/192px-Location_marker_pin_red.svg.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Location_marker_pin_red.svg/192px-Location_marker_pin_red.svg.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #f3f4f6; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #notification-area {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; width: 90%; max-width: 400px;
+        }
+        .notification {
+            background-color: #10b981; color: white; padding: 12px; border-radius: 8px;
+            margin-bottom: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: opacity 0.5s ease;
+        }
+        .notification.error { background-color: #ef4444; }
+        .notification.info  { background-color: #3b82f6; }
+
+        /* Marcadors personalitzats */
+        .marker-inspeccio {
+            background: #ef4444;
+            border: 3px solid white;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .marker-inspeccio.imported {
+            background: #8b5cf6;
+        }
+
+        /* Popup QGIS-friendly */
+        .popup-content { font-size: 13px; min-width: 200px; max-width: 280px; }
+        .popup-content b { color: #374151; }
+        .popup-content .popup-id { 
+            background: #eff6ff; border: 1px solid #bfdbfe; 
+            border-radius: 4px; padding: 2px 6px; font-size: 11px; 
+            color: #1d4ed8; font-family: monospace; margin-bottom: 6px; display: inline-block;
+        }
+        .popup-content .popup-row { 
+            border-bottom: 1px solid #f3f4f6; padding: 3px 0; 
+        }
+        .popup-content .popup-fotos-label {
+            font-size: 11px; color: #6b7280; margin-top: 4px;
+        }
+    </style>
+</head>
+<body class="relative">
+
+    <div id="notification-area"></div>
+    <div id="map"></div>
+    
+    <!-- Botons Flotants -->
+    <div class="fixed bottom-8 right-4 flex flex-col gap-4 z-[400]">
+        <button onclick="openToolsPanel()" title="Gestió de dades" class="bg-white p-3 rounded-full shadow-lg text-gray-700 hover:bg-gray-100 flex justify-center items-center">
+            <i data-lucide="settings"></i>
+        </button>
+        <button onclick="locateUser()" title="Localitzar-me" class="bg-white p-3 rounded-full shadow-lg text-blue-600 hover:bg-gray-100 flex justify-center items-center">
+            <i data-lucide="crosshair"></i>
+        </button>
+        <button onclick="openFormPanel()" title="Nou punt" class="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 flex justify-center items-center transition transform active:scale-95">
+            <i data-lucide="plus" class="w-8 h-8"></i>
+        </button>
+    </div>
+
+    <div id="backdrop" class="fixed inset-0 bg-black/40 z-[500] hidden transition-opacity" onclick="closeAllPanels()"></div>
+
+    <!-- PANELL 1: Formulari de Nou Punt -->
+    <div id="form-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[92vh] flex flex-col">
+        <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+            <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="map-pin" class="text-red-500"></i> Nou Punt
+            </h1>
+            <div class="flex items-center gap-2">
+                <span id="new-point-id" class="text-xs bg-blue-50 text-blue-600 font-mono px-2 py-1 rounded-full border border-blue-200"></span>
+                <button onclick="closeAllPanels()" class="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-5 overflow-y-auto flex flex-col gap-4">
+            <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-700">
+                <i data-lucide="info" class="inline w-4 h-4 mb-0.5"></i> Si no tens GPS, tanca aquest panell i toca directament al mapa per situar la teva ubicació.
+            </div>
+            <div class="bg-purple-50 p-3 rounded-lg text-xs text-purple-700 flex items-center gap-2">
+                <span class="text-base">✈️</span>
+                <span>Les fotos es pujaran automàticament a <strong>Telegram</strong>. Necessites connexió a internet.</span>
+            </div>
+
+            <!-- Coordenades -->
+            <div class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 font-mono flex justify-between items-center">
+                <div><strong>X (UTM):</strong> <span id="lat-display">Buscant...</span></div>
+                <div><strong>Y (UTM):</strong> <span id="lon-display">Buscant...</span></div>
+                <button onclick="locateUser()" class="text-blue-500 hover:text-blue-700 p-1">
+                    <i data-lucide="locate" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Camp: Nom/Codi -->
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Codi / Referència <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
+                <input type="text" id="codi" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: SEC-01, ARBRE-23...">
+            </div>
+
+            <!-- Camp: Tipus -->
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Tipus</label>
+                <select id="tipus" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                    <option value="">-- Selecciona --</option>
+                    <option value="incidencia">Incidència</option>
+                    <option value="element">Element inventariat</option>
+                    <option value="mostra">Mostra</option>
+                    <option value="observacio">Observació</option>
+                    <option value="altres">Altres</option>
+                </select>
+            </div>
+
+            <!-- Camp: Estat -->
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Estat</label>
+                <div class="flex gap-2">
+                    <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-green-50 transition" id="estat-bo-label">
+                        <input type="radio" name="estat" value="bo" class="hidden" onchange="updateEstat(this)"> 
+                        <span class="text-lg">✅</span> <span class="text-sm font-medium text-gray-700">Bo</span>
+                    </label>
+                    <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-yellow-50 transition" id="estat-regular-label">
+                        <input type="radio" name="estat" value="regular" class="hidden" onchange="updateEstat(this)">
+                        <span class="text-lg">⚠️</span> <span class="text-sm font-medium text-gray-700">Regular</span>
+                    </label>
+                    <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-red-50 transition" id="estat-dolent-label">
+                        <input type="radio" name="estat" value="dolent" class="hidden" onchange="updateEstat(this)">
+                        <span class="text-lg">❌</span> <span class="text-sm font-medium text-gray-700">Dolent</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
+                <textarea id="notes" rows="3" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
+            </div>
+
+            <!-- Fotografies -->
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Fotografies</label>
+                <label class="w-full border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold p-4 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-100 transition">
+                    <i data-lucide="camera"></i> 
+                    <span id="photo-label">Fer fotos o seleccionar-ne</span>
+                    <input type="file" id="photoInput" accept="image/*" capture="environment" multiple class="hidden" onchange="handlePhoto(event)">
+                </label>
+                <div id="photo-preview-container" class="hidden mt-2 grid grid-cols-2 gap-2"></div>
+            </div>
+
+            <button onclick="savePoint()" class="w-full bg-blue-600 text-white py-4 mt-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md">
+                <i data-lucide="save"></i> Guardar Punt al Mapa
+            </button>
+        </div>
+    </div>
+
+    <!-- PANELL 2: Eines i Gestió de Dades -->
+    <div id="tools-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[85vh] flex flex-col">
+        <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+            <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="database" class="text-gray-500"></i> Gestió de Dades
+            </h1>
+            <button onclick="closeAllPanels()" class="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        
+        <div class="p-5 overflow-y-auto flex flex-col gap-3">
+            
+            <!-- Indicador de Cloud Sync -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex justify-between items-center shadow-sm">
+                <span class="text-sm font-semibold text-gray-700">Connexió i Sincronització:</span>
+                <span id="cloud-status" class="text-xs font-bold px-2 py-1 rounded-full bg-gray-200 text-gray-600 flex items-center gap-1">
+                    <i data-lucide="smartphone" class="w-3 h-3"></i> Mode Local
+                </span>
+            </div>
+
+            <div class="text-center font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm">
+                Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
+            </div>
+
+            <!-- Info compatibilitat QGIS -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
+                <strong>📐 Compatible QGIS:</strong> Les fotos es pugen automàticament a Telegram. El GeoJSON exportat conté les URLs de les fotos. Importa el fitxer <code class="bg-green-100 px-1 rounded">mapa_inspeccions.geojson</code> directament a QGIS.
+            </div>
+
+            <div class="h-px bg-gray-100 my-1"></div>
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Exportar a QGIS</p>
+
+            <!-- Exportar ZIP (amb fotos) -->
+            <button onclick="exportDataAsZip()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition shadow-sm">
+                <i data-lucide="folder-down"></i> Exportar ZIP (GeoJSON + Fotos)
+            </button>
+            <p class="text-xs text-gray-400 text-center -mt-1 mb-2">Descomprimeix a QGIS. Les fotos queden referenciades a la taula d'atributs.</p>
+
+            <!-- Exportar GeoJSON net -->
+            <button onclick="exportGeoJSONonly()" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition shadow-sm">
+                <i data-lucide="file-down"></i> Exportar GeoJSON (sense fotos)
+            </button>
+            <p class="text-xs text-gray-400 text-center -mt-1">Importació directa a QGIS en 1 clic. Sense dades de fotos.</p>
+
+            <div class="h-px bg-gray-100 my-1"></div>
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Importar</p>
+
+            <!-- Importar GeoJSON -->
+            <label class="flex items-center justify-center gap-2 w-full bg-purple-50 text-purple-700 py-3 rounded-lg font-semibold cursor-pointer hover:bg-purple-100 transition border border-purple-200 shadow-sm">
+                <i data-lucide="upload" class="w-5 h-5"></i> Importar des de QGIS (.geojson)
+                <input type="file" accept=".geojson,.json" class="hidden" onchange="importGeoJSON(event)">
+            </label>
+            <p class="text-xs text-gray-400 text-center -mt-1">Combina punts existents amb els nous importats.</p>
+
+            <div class="h-px bg-gray-100 my-1"></div>
+
+            <!-- Esborrar -->
+            <button onclick="clearData()" class="w-full bg-red-50 text-red-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition border border-red-200">
+                <i data-lucide="trash-2"></i> Esborrar totes les dades
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // ─── Variables globals ───────────────────────────────────────
+        let map, userMarker, currentLat = null, currentLon = null;
+        let currentPhotosFiles = []; // Optimització: Blobs en lloc de Base64
+        let previewUrls = []; // Optimització de memòria
+        let savedPoints = [];
+        let pointCounter = 0;
+
+        // Variables pel Cloud Sync
+        let db, auth, appId, unsubscribeSnapshot;
+        let isCloudSyncActive = false;
+
+        // ─── Projecció EPSG:25831 (UTM zona 31N) ─────────────────────
+        proj4.defs("EPSG:25831", "+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+        function wgs84ToUtm31(lon, lat) {
+            const [x, y] = proj4("EPSG:4326", "EPSG:25831", [lon, lat]);
+            return { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 };
+        }
+
+        // ─── Configuració Telegram ────────────────────────────────────
+        const TG_TOKEN   = '8350449694:AAEFT7BxICmQb3s7BbYtRN772_IJpMn2oPM';
+        const TG_CHAT_ID = '-1003974833812';
+
+        async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
+            try {
+                const formData = new FormData();
+                formData.append('chat_id', TG_CHAT_ID);
+                formData.append('caption', `Punt #${numPunt} · Foto ${fotoIndex}`);
+                formData.append('photo', blob, `foto_punt${numPunt}_${fotoIndex}.jpg`);
+
+                const resp = await fetch(
+                    `https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,
+                    { method: 'POST', body: formData }
+                );
+                const data = await resp.json();
+                if (!data.ok) { console.error('Telegram error:', data); return null; }
+
+                const fileId   = data.result.photo[data.result.photo.length - 1].file_id;
+                const fileResp = await fetch(
+                    `https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`
+                );
+                const fileData = await fileResp.json();
+                const fileUrl  = `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}`;
+                return { fileId, fileUrl };
+            } catch(err) {
+                console.error('Error pujant foto a Telegram:', err);
+                return null;
+            }
+        }
+
+        const backdrop = document.getElementById('backdrop');
+        const formPanel = document.getElementById('form-panel');
+        const toolsPanel = document.getElementById('tools-panel');
+
+        function getNextPointNumber() {
+            const nums = savedPoints.map(f => f.properties.num_punt).filter(n => typeof n === 'number');
+            return nums.length > 0 ? Math.max(...nums) + 1 : 1;
+        }
+
+        function openFormPanel() {
+            const nextNum = getNextPointNumber();
+            document.getElementById('new-point-id').innerText = `#${nextNum}`;
+            document.querySelectorAll('input[name="estat"]').forEach(r => r.checked = false);
+            document.querySelectorAll('[id^=estat-]').forEach(l => l.classList.remove('ring-2', 'ring-offset-1'));
+            backdrop.classList.remove('hidden');
+            setTimeout(() => formPanel.classList.remove('translate-y-full'), 10);
+        }
+
+        function openToolsPanel() {
+            backdrop.classList.remove('hidden');
+            setTimeout(() => toolsPanel.classList.remove('translate-y-full'), 10);
+        }
+
+        function closeAllPanels() {
+            formPanel.classList.add('translate-y-full');
+            toolsPanel.classList.add('translate-y-full');
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
+
+        function updateEstat(radio) {
+            document.querySelectorAll('[id^=estat-]').forEach(l => {
+                l.classList.remove('ring-2', 'ring-offset-1', 'ring-green-400', 'ring-yellow-400', 'ring-red-400', 'bg-green-50', 'bg-yellow-50', 'bg-red-50');
+            });
+            const colors = { bo: ['ring-green-400','bg-green-50'], regular: ['ring-yellow-400','bg-yellow-50'], dolent: ['ring-red-400','bg-red-50'] };
+            const label = document.getElementById(`estat-${radio.value}-label`);
+            if (label && colors[radio.value]) {
+                label.classList.add('ring-2', 'ring-offset-1', ...colors[radio.value]);
+            }
+        }
+
+        function showNotification(msg, isError = false, isInfo = false) {
+            const area = document.getElementById('notification-area');
+            const notif = document.createElement('div');
+            notif.className = `notification ${isError ? 'error' : ''} ${isInfo ? 'info' : ''}`;
+            notif.innerText = msg;
+            area.appendChild(notif);
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                setTimeout(() => notif.remove(), 500);
+            }, 3500);
+        }
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([41.7286, 1.8201], 14);
+            L.control.zoom({ position: 'topright' }).addTo(map);
+
+            const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 20, attribution: 'Tiles &copy; Esri'
+            });
+            const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19, attribution: 'Tiles &copy; Esri'
+            });
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+            });
+
+            esriStreet.addTo(map);
+
+            L.control.layers({
+                "Carrers (Esri)": esriStreet,
+                "Satèl·lit (Esri)": esriSat,
+                "OpenStreetMap": osm
+            }, {}, { position: 'topright' }).addTo(map);
+
+            map.on('click', function(e) {
+                updatePosition(e.latlng.lat, e.latlng.lng);
+                showNotification("📍 Coordenades actualitzades manualment.", false, true);
+            });
+
+            locateUser();
+            setTimeout(() => { map.invalidateSize(); }, 500);
+        }
+
+        function updatePosition(lat, lon) {
+            currentLat = lat;
+            currentLon = lon;
+            const utm = wgs84ToUtm31(lon, lat);
+            document.getElementById('lat-display').innerText = utm.x.toFixed(2) + ' m';
+            document.getElementById('lon-display').innerText = utm.y.toFixed(2) + ' m';
+
+            const latlng = [currentLat, currentLon];
+            if (userMarker) {
+                userMarker.setLatLng(latlng);
+            } else {
+                const userIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: "<div style='background-color:#3b82f6; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow: 0 0 0 4px rgba(59,130,246,0.3);'></div>",
+                    iconSize: [16, 16], iconAnchor: [8, 8]
+                });
+                userMarker = L.marker(latlng, {icon: userIcon, zIndexOffset: 1000}).addTo(map);
+            }
+        }
+
+        function locateUser() {
+            if (!navigator.geolocation) {
+                showNotification("El teu navegador no suporta geolocalització", true);
+                return;
+            }
+            document.getElementById('lat-display').innerText = "Buscant...";
+            document.getElementById('lon-display').innerText = "Buscant...";
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    updatePosition(position.coords.latitude, position.coords.longitude);
+                    map.flyTo([position.coords.latitude, position.coords.longitude], 17);
+                    showNotification("✅ Ubicació GPS trobada!");
+                },
+                () => { showNotification("Sense GPS. Toca el mapa per situar-te.", true); },
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 12000 }
+            );
+        }
+
+        // ─── Processament de foto optimitzat per mòbil (prevé col·lapse de RAM) ───────────────
+        async function handlePhoto(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const MAX_WIDTH = 800;   
+            const QUALITY   = 0.65;  
+            const MAX_FOTOS = 5;
+
+            const previewContainer = document.getElementById('photo-preview-container');
+            previewContainer.classList.remove('hidden');
+
+            const disponibles = MAX_FOTOS - currentPhotosFiles.length;
+            const aProcessar  = Math.min(files.length, disponibles);
+
+            if (disponibles <= 0) {
+                showNotification(`Màxim ${MAX_FOTOS} fotos per punt.`, true);
+                return;
+            }
+
+            for (let i = 0; i < aProcessar; i++) {
+                document.getElementById('photo-label').innerText = `Processant foto ${i + 1} de ${aProcessar}...`;
+
+                try {
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+                    let w, h;
+
+                    // Mètode 1: createImageBitmap (Ultra-eficient, no peta la RAM del mòbil)
+                    if (window.createImageBitmap) {
+                        try {
+                            const bmp = await createImageBitmap(files[i], { resizeWidth: MAX_WIDTH, resizeQuality: 'medium' });
+                            w = bmp.width;
+                            h = bmp.height;
+                            canvas.width = w;
+                            canvas.height = h;
+                            ctx.drawImage(bmp, 0, 0, w, h);
+                            bmp.close(); // Allibera memòria a l'instant
+                        } catch (err) {
+                            // Fallback si el navegador no suporta el redimensionat
+                            await loadWithImageTag(files[i], canvas, ctx, MAX_WIDTH);
+                        }
+                    } else {
+                        // Mètode 2: Fallback tradicional per a navegadors antics
+                        await loadWithImageTag(files[i], canvas, ctx, MAX_WIDTH);
+                    }
+
+                    // Guardar la foto comprimida a memòria com a Blob
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
+                    
+                    // Neteja extrema per alliberar la memòria de l'iPhone/Android
+                    canvas.width = 0;
+                    canvas.height = 0;
+                    canvas = null;
+                    ctx = null;
+
+                    if (!blob) throw new Error("Error generant blob");
+
+                    currentPhotosFiles.push(blob);
+
+                    const previewUrl = URL.createObjectURL(blob);
+                    previewUrls.push(previewUrl);
+
+                    const imgEl = document.createElement('img');
+                    imgEl.src = previewUrl;
+                    imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
+                    previewContainer.appendChild(imgEl);
+
+                } catch (err) {
+                    console.error("Error processant foto:", err);
+                    showNotification("S'ha quedat sense memòria. Tanca altres apps o baixa la resolució de la càmera.", true);
+                }
+            }
+
+            document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es afegida/es ✓`;
+            if (files.length > aProcessar) {
+                showNotification(`Només s'han afegit ${aProcessar} fotos (límit ${MAX_FOTOS}).`, false, true);
+            }
+            event.target.value = '';
+        }
+
+        // Funció fallback tradicional per navegadors on falli createImageBitmap
+        function loadWithImageTag(file, canvas, ctx, maxWidth) {
+            return new Promise((resolve, reject) => {
+                const objectUrl = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    img.src = ''; // Buidar memòria original
+                    resolve();
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    reject(new Error("No s'ha pogut carregar la imatge"));
+                };
+                img.src = objectUrl;
+            });
+        }
+
+        // ─── INIT NÚVOL I SINCRONITZACIÓ ──────────────────────────────
+        async function initCloud() {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try {
+                    const firebaseApp = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                    const firebaseAuth = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                    const firebaseFirestore = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = firebaseApp.initializeApp(firebaseConfig);
+                    auth = firebaseAuth.getAuth(app);
+                    db = firebaseFirestore.getFirestore(app);
+                    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await firebaseAuth.signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await firebaseAuth.signInAnonymously(auth);
+                    }
+
+                    firebaseAuth.onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            isCloudSyncActive = true;
+                            const statusEl = document.getElementById('cloud-status');
+                            if(statusEl) {
+                                statusEl.innerHTML = '<i data-lucide="cloud" class="w-4 h-4 inline"></i> Núvol Connectat';
+                                statusEl.className = "text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 flex items-center gap-1 shadow-inner";
+                                lucide.createIcons();
+                            }
+                            startSync(firebaseFirestore);
+                        }
+                    });
+                } catch(e) {
+                    console.error("Error al connectar al núvol:", e);
+                    fallbackToLocal();
+                }
+            } else {
+                fallbackToLocal();
+            }
+        }
+
+        function fallbackToLocal() {
+            isCloudSyncActive = false;
+            loadSavedPoints(); 
+        }
+
+        function startSync(firebaseFirestore) {
+            const { collection, onSnapshot } = firebaseFirestore;
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'inspeccions');
+            
+            unsubscribeSnapshot = onSnapshot(colRef, (snapshot) => {
+                savedPoints = [];
+                map.eachLayer((layer) => {
+                    if (layer instanceof L.Marker && layer !== userMarker) {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                snapshot.forEach(docSnap => {
+                    const feature = docSnap.data();
+                    if (!feature.id) feature.id = docSnap.id;
+                    savedPoints.push(feature);
+                    addMarkerToMap(feature);
+                });
+                updatePointsCount();
+            }, (error) => {
+                console.error("Error de sincronització:", error);
+                showNotification("Error de sincronització al núvol", true);
+            });
+        }
+
+        async function savePoint() {
+            if (currentLat === null || currentLon === null) {
+                showNotification("Si us plau, espera a tenir senyal GPS o toca el mapa primer.", true);
+                return;
+            }
+
+            const notes  = document.getElementById('notes').value.trim();
+            const codi   = document.getElementById('codi').value.trim();
+            const tipus  = document.getElementById('tipus').value;
+            const estatR = document.querySelector('input[name="estat"]:checked');
+            const estat  = estatR ? estatR.value : '';
+            const numPunt = getNextPointNumber();
+
+            // Puja fotos a Telegram directament des dels arxius (Blobs)
+            let telegramUrls = [];
+            let telegramIds  = [];
+            if (currentPhotosFiles.length > 0) {
+                showNotification("📤 Pujant fotos a Telegram...", false, true);
+                for (let i = 0; i < currentPhotosFiles.length; i++) {
+                    const result = await uploadPhotoToTelegram(currentPhotosFiles[i], numPunt, i + 1);
+                    if (result) {
+                        telegramUrls.push(result.fileUrl);
+                        telegramIds.push(result.fileId);
+                    } else {
+                        showNotification(`⚠️ No s'ha pogut pujar la foto ${i+1}.`, true);
+                    }
+                }
+                if (telegramUrls.length > 0) {
+                    showNotification(`✅ ${telegramUrls.length} foto/es pujades a Telegram!`);
+                }
+            }
+
+            const newFeature = {
+                "type": "Feature",
+                "id": Date.now().toString(), 
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        parseFloat(currentLon.toFixed(8)),
+                        parseFloat(currentLat.toFixed(8))
+                    ]
+                },
+                "properties": {
+                    "num_punt":  numPunt,
+                    "codi":      codi || '',
+                    "tipus":     tipus || '',
+                    "estat":     estat || '',
+                    "notes":     notes || '',
+                    "data_hora": new Date().toISOString(),
+                    "utm_x":     wgs84ToUtm31(currentLon, currentLat).x,
+                    "utm_y":     wgs84ToUtm31(currentLon, currentLat).y,
+                    "lat":       parseFloat(currentLat.toFixed(8)),
+                    "lon":       parseFloat(currentLon.toFixed(8)),
+                    "n_fotos":   currentPhotosFiles.length,
+                    "foto_urls": telegramUrls,
+                    "foto_ids":  telegramIds,
+                    "fotos":     []
+                }
+            };
+
+            if (isCloudSyncActive) {
+                try {
+                    const firebaseFirestore = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                    const docRef = firebaseFirestore.doc(db, 'artifacts', appId, 'public', 'data', 'inspeccions', newFeature.id);
+                    await firebaseFirestore.setDoc(docRef, newFeature);
+                } catch (e) {
+                    console.error("Error guardant al núvol", e);
+                    showNotification("Error guardant al núvol", true);
+                }
+            } else {
+                savedPoints.push(newFeature);
+                localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+                addMarkerToMap(newFeature);
+                updatePointsCount();
+            }
+            
+            // Reset formulari
+            document.getElementById('notes').value = '';
+            document.getElementById('codi').value = '';
+            document.getElementById('tipus').value = '';
+            document.getElementById('photoInput').value = '';
+            
+            // Neteja profunda d'arxius temporals per no col·lapsar el mòbil
+            previewUrls.forEach(url => URL.revokeObjectURL(url));
+            previewUrls = [];
+            currentPhotosFiles = [];
+            
+            document.querySelectorAll('input[name="estat"]').forEach(r => r.checked = false);
+            document.querySelectorAll('[id^=estat-]').forEach(l => l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+            
+            const previewContainer = document.getElementById('photo-preview-container');
+            previewContainer.innerHTML = '';
+            previewContainer.classList.add('hidden');
+            document.getElementById('photo-label').innerText = "Fer fotos o seleccionar-ne";
+
+            closeAllPanels();
+            showNotification(`✅ Punt #${numPunt} guardat correctament!`);
+        }
+
+        function addMarkerToMap(feature, isImported = false) {
+            const coords = feature.geometry.coordinates;
+            const props  = feature.properties || {};
+
+            const colorMap = { bo: '#22c55e', regular: '#f59e0b', dolent: '#ef4444' };
+            const color = colorMap[props.estat] || (isImported ? '#8b5cf6' : '#ef4444');
+
+            const icon = L.divIcon({
+                className: '',
+                html: `<div style="
+                    background:${color};
+                    width:18px; height:18px;
+                    border-radius:50% 50% 50% 0;
+                    transform:rotate(-45deg);
+                    border:2.5px solid white;
+                    box-shadow:0 2px 5px rgba(0,0,0,0.35);
+                "></div>`,
+                iconSize: [18, 18],
+                iconAnchor: [9, 18],
+                popupAnchor: [0, -20]
+            });
+
+            const marker = L.marker([coords[1], coords[0]], { icon }).addTo(map);
+
+            let popupHtml = `<div class="popup-content">`;
+            const id = props.num_punt || feature.id || '?';
+            popupHtml += `<div class="popup-id">Punt #${id}`;
+            if (props.codi) popupHtml += ` · ${props.codi}`;
+            popupHtml += `</div>`;
+
+            if (props.tipus) popupHtml += `<div class="popup-row"><b>Tipus:</b> ${props.tipus}</div>`;
+            if (props.estat) {
+                const emoji = {bo:'✅', regular:'⚠️', dolent:'❌'}[props.estat] || '';
+                popupHtml += `<div class="popup-row"><b>Estat:</b> ${emoji} ${props.estat}</div>`;
+            }
+            if (props.notes) popupHtml += `<div class="popup-row"><b>Notes:</b> ${props.notes}</div>`;
+
+            const fotoUrls = (props.foto_urls && props.foto_urls.length > 0)
+                ? props.foto_urls
+                : (props.fotos && props.fotos.length > 0 ? props.fotos : []);
+
+            if (fotoUrls.length > 0) {
+                popupHtml += `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">`;
+                fotoUrls.slice(0, 3).forEach(f => {
+                    popupHtml += `<img src="${f}" style="width:100%;max-height:140px;object-fit:cover;border-radius:4px;">`;
+                });
+                if (fotoUrls.length > 3) popupHtml += `<span class="popup-fotos-label">+${fotoUrls.length - 3} foto/es més</span>`;
+                popupHtml += `</div>`;
+            } else if (props.n_fotos > 0) {
+                popupHtml += `<div class="popup-fotos-label">📷 ${props.n_fotos} foto/es pujades a Telegram</div>`;
+            }
+
+            if (props.data_hora) {
+                const d = new Date(props.data_hora);
+                const dStr = isNaN(d) ? props.data_hora : d.toLocaleString('ca-ES');
+                popupHtml += `<div style="margin-top:6px;font-size:10px;color:#9ca3af;">${dStr}</div>`;
+            }
+
+            if (!props.num_punt && !props.data_hora) {
+                for (let key in props) {
+                    if (key !== 'fotos' && key !== 'foto' && key !== 'arxius_fotos' && typeof props[key] !== 'object' && props[key]) {
+                        popupHtml += `<div class="popup-row"><b>${key}:</b> ${props[key]}</div>`;
+                    }
+                }
+            }
+
+            popupHtml += `</div>`;
+            marker.bindPopup(popupHtml, { maxWidth: 300 });
+        }
+
+        function loadSavedPoints() {
+            const stored = localStorage.getItem('inspeccions_qgis');
+            if (stored) {
+                try {
+                    savedPoints = JSON.parse(stored);
+                    savedPoints.forEach(feature => addMarkerToMap(feature));
+                    updatePointsCount();
+                } catch(e) {
+                    showNotification("Error en carregar dades locals.", true);
+                }
+            }
+        }
+
+        function updatePointsCount() {
+            document.getElementById('points-count').innerText = savedPoints.length;
+        }
+
+        function importGeoJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const geoJSON = JSON.parse(e.target.result);
+                    let features = [];
+
+                    if (geoJSON.type === "FeatureCollection" && geoJSON.features) {
+                        features = geoJSON.features;
+                    } else if (geoJSON.type === "Feature") {
+                        features = [geoJSON];
+                    } else {
+                        showNotification("El fitxer no és un GeoJSON vàlid.", true);
+                        return;
+                    }
+
+                    const existingIds = new Set(savedPoints.map(f => {
+                        return f.properties?.num_punt || f.id || null;
+                    }).filter(Boolean));
+
+                    let afegits = 0, duplicats = 0;
+                    
+                    if (isCloudSyncActive) {
+                        showNotification("⏳ Pujant punts al núvol...", false, true);
+                        const firebaseFirestore = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                        for (const feature of features) {
+                            const fid = feature.properties?.num_punt || feature.id;
+                            if (fid && existingIds.has(fid)) { duplicats++; continue; }
+                            
+                            if (!feature.properties) feature.properties = {};
+                            if (!feature.id) feature.id = (fid || Date.now()).toString();
+                            
+                            const docRef = firebaseFirestore.doc(db, 'artifacts', appId, 'public', 'data', 'inspeccions', feature.id);
+                            await firebaseFirestore.setDoc(docRef, feature);
+                            afegits++;
+                        }
+                    } else {
+                        features.forEach(feature => {
+                            const fid = feature.properties?.num_punt || feature.id;
+                            if (fid && existingIds.has(fid)) { duplicats++; return; }
+                            if (!feature.properties) feature.properties = {};
+                            savedPoints.push(feature);
+                            addMarkerToMap(feature, true);
+                            afegits++;
+                        });
+                        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+                        updatePointsCount();
+                    }
+
+                    if (features.length > 0) {
+                        try {
+                            const bounds = L.geoJSON(features).getBounds();
+                            if (bounds.isValid()) map.fitBounds(bounds, { padding: [60, 60] });
+                        } catch(_) {}
+                    }
+                    
+                    closeAllPanels();
+                    let msg = `✅ ${afegits} punt/s importat/s correctament!`;
+                    if (duplicats > 0) msg += ` (${duplicats} duplicat/s ignorat/s)`;
+                    showNotification(msg);
+
+                } catch (error) {
+                    showNotification("Error en llegir el fitxer GeoJSON.", true);
+                    console.error(error);
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+        
+        async function clearData() {
+            if (confirm("Segur que vols esborrar totes les dades?\nAssegura't d'haver exportat primer!")) {
+                if (isCloudSyncActive) {
+                    try {
+                        const firebaseFirestore = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                        for (const feature of savedPoints) {
+                            const docRef = firebaseFirestore.doc(db, 'artifacts', appId, 'public', 'data', 'inspeccions', feature.id);
+                            await firebaseFirestore.deleteDoc(docRef);
+                        }
+                        showNotification("Dades esborrades del núvol.");
+                    } catch (e) {
+                        console.error(e);
+                    }
+                } else {
+                    localStorage.removeItem('inspeccions_qgis');
+                    savedPoints = [];
+                    location.reload();
+                }
+            }
+        }
+
+        function exportGeoJSONonly() {
+            if (savedPoints.length === 0) {
+                showNotification("No hi ha cap punt per exportar.", true);
+                return;
+            }
+
+            const exportFeatures = JSON.parse(JSON.stringify(savedPoints));
+            exportFeatures.forEach(f => {
+                const urls = f.properties.foto_urls && f.properties.foto_urls.length > 0 ? f.properties.foto_urls : [];
+                const nFotos = urls.length || f.properties.n_fotos || 0;
+                delete f.properties.fotos;
+                delete f.properties.foto_ids;
+                f.properties.foto_urls    = urls.join('|');
+                f.properties.arxius_fotos = urls.join('|');
+                f.properties.n_fotos      = nFotos;
+            });
+
+            const geoJSON = buildGeoJSONExport(exportFeatures);
+            downloadFile(JSON.stringify(geoJSON, null, 2), `inspeccions_${dateStr()}.geojson`, 'application/geo+json');
+            closeAllPanels();
+            showNotification("GeoJSON exportat! Importa'l directament a QGIS.");
+        }
+
+        async function exportDataAsZip() {
+            if (savedPoints.length === 0) {
+                showNotification("No hi ha cap punt per exportar.", true);
+                return;
+            }
+            showNotification("⏳ Generant arxiu ZIP...", false, true);
+            try {
+                const zip = new JSZip();
+                const fotosFolder = zip.folder("fotos");
+                const exportFeatures = JSON.parse(JSON.stringify(savedPoints));
+                
+                exportFeatures.forEach((feature) => {
+                    const props = feature.properties;
+                    const urls = props.foto_urls && props.foto_urls.length > 0 ? props.foto_urls : [];
+                    delete props.fotos;      
+                    delete props.foto_ids;   
+                    props.foto_urls    = urls.join('|');
+                    props.arxius_fotos = urls.join('|'); 
+                    if (typeof props.n_fotos === 'undefined') props.n_fotos = urls.length;
+                });
+                
+                const geoJSON = buildGeoJSONExport(exportFeatures);
+                zip.file("mapa_inspeccions.geojson", JSON.stringify(geoJSON, null, 2));
+
+                zip.file("LLEGIR.txt", `INSTRUCCIONS D'ÚS AMB QGIS\n=============================\n\n1. Descomprimeix aquesta carpeta a l'ordinador.\n2. Obre QGIS i arrossega el fitxer "mapa_inspeccions.geojson" al mapa.\n3. Les fotografies estan pujades a Telegram.\n4. Per veure les fotos des de QGIS (Consells d'element):\n   Propietats de la capa → Consells → Expressió:\n   [% '<img src="' || "foto_urls" || '" width="300">' %]\n\nExportat el: ${new Date().toLocaleString('ca-ES')}\n`);
+                
+                const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+                downloadBlob(content, `inspeccions_camp_${dateStr()}.zip`);
+                
+                closeAllPanels();
+                showNotification("✅ ZIP descarregat! Descomprimeix i importa a QGIS.");
+                
+            } catch (err) {
+                console.error(err);
+                showNotification("Error a l'exportar el ZIP.", true);
+            }
+        }
+
+        function buildGeoJSONExport(features) {
+            return {
+                "type": "FeatureCollection",
+                "name": "Inspeccions_Camp",
+                "crs": {
+                    "type": "name",
+                    "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }
+                },
+                "features": features
+            };
+        }
+
+        function dateStr() { return new Date().toISOString().slice(0, 10).replace(/-/g, ''); }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            downloadBlob(blob, filename);
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 500);
+        }
+
+        // Exposar funcions al context global pels botons HTML
+        window.openFormPanel = openFormPanel;
+        window.openToolsPanel = openToolsPanel;
+        window.closeAllPanels = closeAllPanels;
+        window.locateUser = locateUser;
+        window.handlePhoto = handlePhoto;
+        window.savePoint = savePoint;
+        window.exportDataAsZip = exportDataAsZip;
+        window.exportGeoJSONonly = exportGeoJSONonly;
+        window.importGeoJSON = importGeoJSON;
+        window.clearData = clearData;
+        window.updateEstat = updateEstat;
+
+        window.onload = async () => {
+            initMap();
+            await initCloud(); // Inicia la connexió al núvol a l'obrir l'app
+        };
+    </script>
+</body>
+</html>
