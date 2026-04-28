@@ -15,22 +15,6 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjMjU2M2ViIi8+PGNpcmNsZSBjeD0iOTYiIGN5PSI4MCIgcj0iMzYiIGZpbGw9IndoaXRlIi8+PGNpcmNsZSBjeD0iOTYiIGN5PSI4MCIgcj0iMTYiIGZpbGw9IiMyNTYzZWIiLz48cG9seWdvbiBwb2ludHM9Ijc2LDEwNCAxMTYsMTA0IDk2LDE0OCIgZmlsbD0id2hpdGUiLz48L3N2Zz4=">
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjMjU2M2ViIi8+PGNpcmNsZSBjeD0iOTYiIGN5PSI4MCIgcj0iMzYiIGZpbGw9IndoaXRlIi8+PGNpcmNsZSBjeD0iOTYiIGN5PSI4MCIgcj0iMTYiIGZpbGw9IiMyNTYzZWIiLz48cG9seWdvbiBwb2ludHM9Ijc2LDEwNCAxMTYsMTA0IDk2LDE0OCIgZmlsbD0id2hpdGUiLz48L3N2Zz4=">
 
-    <!-- ═══ Service Worker inline (necessari per PWA installable) ══ -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', e => self.skipWaiting());
-                self.addEventListener('activate', e => self.clients.claim());
-                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response(''))));
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl, {scope: '/'})
-                .then(() => console.log('SW registrat'))
-                .catch(e => console.warn('SW error:', e));
-        }
-    </script>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -554,10 +538,18 @@ function addMarkerToMap(feature, isImported=false) {
     const color={'bo':'#22c55e','regular':'#f59e0b','dolent':'#ef4444'}[props.estat]||(isImported?'#8b5cf6':'#ef4444');
     const icon=L.divIcon({className:'',html:`<div style="background:${color};width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,.35);"></div>`,iconSize:[18,18],iconAnchor:[9,18],popupAnchor:[0,-20]});
     const marker=L.marker([coords[1],coords[0]],{icon}).addTo(map);
+    
     let html=`<div class="popup-content"><div class="popup-id">Punt #${props.num_punt||'?'}${props.codi?' · '+props.codi:''}</div>`;
+    
     if(props.tipus) html+=`<div class="popup-row"><b>Tipus:</b> ${props.tipus}</div>`;
-    if(props.estat) html+=`<div class="popup-row"><b>Estat:</b> ${'bo':'✅','regular':'⚠️','dolent':'❌'}[props.estat]||''} ${props.estat}</div>`;
+    
+    if(props.estat) {
+        const emoji = {'bo':'✅', 'regular':'⚠️', 'dolent':'❌'}[props.estat] || '';
+        html+=`<div class="popup-row"><b>Estat:</b> ${emoji} ${props.estat}</div>`;
+    }
+    
     if(props.notes) html+=`<div class="popup-row"><b>Notes:</b> ${props.notes}</div>`;
+    
     const urls=(props.foto_urls&&props.foto_urls.length>0)?props.foto_urls:(props.fotos&&props.fotos.length>0?props.fotos:[]);
     if(urls.length>0){
         html+=`<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">`;
@@ -565,6 +557,7 @@ function addMarkerToMap(feature, isImported=false) {
         if(urls.length>3) html+=`<span class="popup-fotos-label">+${urls.length-3} més</span>`;
         html+=`</div>`;
     } else if(props.n_fotos>0) html+=`<div class="popup-fotos-label">📷 ${props.n_fotos} foto/es a Telegram</div>`;
+    
     if(props.data_hora){ const d=new Date(props.data_hora); html+=`<div style="margin-top:6px;font-size:10px;color:#9ca3af;">${isNaN(d)?props.data_hora:d.toLocaleString('ca-ES')}</div>`; }
     html+=`</div>`;
     marker.bindPopup(html,{maxWidth:300});
