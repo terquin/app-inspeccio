@@ -422,13 +422,13 @@
             );
         }
 
-        // ─── Processament de foto optimitzat per mòbil (prevé col·lapse de RAM) ───────────────
+        // ─── Processament de foto OPTIMITZAT EXTREM PER A MÒBIL (evita talls de memòria) ────────
         async function handlePhoto(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
 
             const MAX_WIDTH = 800;   
-            const QUALITY   = 0.65;  
+            const QUALITY   = 0.6;   // Encara més comprimit
             const MAX_FOTOS = 5;
 
             const previewContainer = document.getElementById('photo-preview-container');
@@ -446,83 +446,77 @@
                 document.getElementById('photo-label').innerText = `Processant foto ${i + 1} de ${aProcessar}...`;
 
                 try {
-                    let canvas = document.createElement('canvas');
-                    let ctx = canvas.getContext('2d');
-                    let w, h;
+                    // PAUSA VITAL: Permet a l'OS restaurar la memòria després d'obrir l'App de Càmera
+                    // i dóna temps al Garbage Collector a alliberar memòria prèvia.
+                    await new Promise(r => setTimeout(r, 400));
 
-                    // Mètode 1: createImageBitmap (Ultra-eficient, no peta la RAM del mòbil)
-                    if (window.createImageBitmap) {
-                        try {
-                            const bmp = await createImageBitmap(files[i], { resizeWidth: MAX_WIDTH, resizeQuality: 'medium' });
-                            w = bmp.width;
-                            h = bmp.height;
-                            canvas.width = w;
-                            canvas.height = h;
-                            ctx.drawImage(bmp, 0, 0, w, h);
-                            bmp.close(); // Allibera memòria a l'instant
-                        } catch (err) {
-                            // Fallback si el navegador no suporta el redimensionat
-                            await loadWithImageTag(files[i], canvas, ctx, MAX_WIDTH);
-                        }
-                    } else {
-                        // Mètode 2: Fallback tradicional per a navegadors antics
-                        await loadWithImageTag(files[i], canvas, ctx, MAX_WIDTH);
-                    }
+                    await new Promise((resolve, reject) => {
+                        const objectUrl = URL.createObjectURL(files[i]);
+                        const img = new Image();
+                        
+                        img.onload = () => {
+                            URL.revokeObjectURL(objectUrl); // Allibera l'arxiu original a l'instant
+                            
+                            try {
+                                const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+                                let canvas = document.createElement('canvas');
+                                canvas.width = Math.round(img.width * scale);
+                                canvas.height = Math.round(img.height * scale);
+                                let ctx = canvas.getContext('2d');
+                                
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                
+                                canvas.toBlob((blob) => {
+                                    // DESTRUCCIÓ EXTREMA DE MEMÒRIA (Evita col·lapse de RAM)
+                                    canvas.width = 1;
+                                    canvas.height = 1;
+                                    ctx.clearRect(0,0,1,1);
+                                    canvas = null;
+                                    ctx = null;
+                                    img.src = ''; 
+                                    
+                                    if (!blob) {
+                                        reject(new Error("Error creant Blob"));
+                                        return;
+                                    }
 
-                    // Guardar la foto comprimida a memòria com a Blob
-                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
-                    
-                    // Neteja extrema per alliberar la memòria de l'iPhone/Android
-                    canvas.width = 0;
-                    canvas.height = 0;
-                    canvas = null;
-                    ctx = null;
+                                    currentPhotosFiles.push(blob);
 
-                    if (!blob) throw new Error("Error generant blob");
+                                    const previewUrl = URL.createObjectURL(blob);
+                                    previewUrls.push(previewUrl);
 
-                    currentPhotosFiles.push(blob);
+                                    const imgEl = document.createElement('img');
+                                    imgEl.src = previewUrl;
+                                    imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
+                                    previewContainer.appendChild(imgEl);
 
-                    const previewUrl = URL.createObjectURL(blob);
-                    previewUrls.push(previewUrl);
-
-                    const imgEl = document.createElement('img');
-                    imgEl.src = previewUrl;
-                    imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
-                    previewContainer.appendChild(imgEl);
+                                    resolve();
+                                }, 'image/jpeg', QUALITY);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        };
+                        
+                        img.onerror = () => {
+                            URL.revokeObjectURL(objectUrl);
+                            reject(new Error("No s'ha pogut llegir la imatge"));
+                        };
+                        
+                        img.src = objectUrl;
+                    });
 
                 } catch (err) {
                     console.error("Error processant foto:", err);
-                    showNotification("S'ha quedat sense memòria. Tanca altres apps o baixa la resolució de la càmera.", true);
+                    showNotification("La resolució és massa alta per la memòria del navegador. Tanca altres apps.", true);
+                    break; // Parem el bucle per evitar que el navegador peti del tot
                 }
             }
 
             document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es afegida/es ✓`;
             if (files.length > aProcessar) {
-                showNotification(`Només s'han afegit ${aProcessar} fotos (límit ${MAX_FOTOS}).`, false, true);
+                showNotification(`Límit de ${MAX_FOTOS} fotos assolit.`, false, true);
             }
             event.target.value = '';
-        }
-
-        // Funció fallback tradicional per navegadors on falli createImageBitmap
-        function loadWithImageTag(file, canvas, ctx, maxWidth) {
-            return new Promise((resolve, reject) => {
-                const objectUrl = URL.createObjectURL(file);
-                const img = new Image();
-                img.onload = () => {
-                    URL.revokeObjectURL(objectUrl);
-                    const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-                    canvas.width = Math.round(img.width * scale);
-                    canvas.height = Math.round(img.height * scale);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    img.src = ''; // Buidar memòria original
-                    resolve();
-                };
-                img.onerror = () => {
-                    URL.revokeObjectURL(objectUrl);
-                    reject(new Error("No s'ha pogut carregar la imatge"));
-                };
-                img.src = objectUrl;
-            });
         }
 
         // ─── INIT NÚVOL I SINCRONITZACIÓ ──────────────────────────────
