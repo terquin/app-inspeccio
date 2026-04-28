@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ca">
 <head>
@@ -100,22 +101,16 @@
             <button onclick="locateUser()" class="text-blue-500 p-1"><i data-lucide="locate" class="w-4 h-4"></i></button>
         </div>
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">Codi / Referència <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
-            <input type="text" id="codi" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: SEC-01, ARBRE-23...">
+            <label id="lbl-ui-codi" class="font-semibold text-gray-700 text-sm">Codi / Referència <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
+            <input type="text" id="codi" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="...">
         </div>
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">Tipus</label>
-            <select id="tipus" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                <option value="">-- Selecciona --</option>
-                <option value="incidencia">Incidència</option>
-                <option value="element">Element inventariat</option>
-                <option value="mostra">Mostra</option>
-                <option value="observacio">Observació</option>
-                <option value="altres">Altres</option>
-            </select>
+            <label id="lbl-ui-tipus" class="font-semibold text-gray-700 text-sm">Tipus</label>
+            <!-- Permetem escriure el que es vulgui enlloc d'un select tancat -->
+            <input type="text" id="tipus" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="...">
         </div>
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">Estat</label>
+            <label id="lbl-ui-estat" class="font-semibold text-gray-700 text-sm">Estat</label>
             <div class="flex gap-2">
                 <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-green-50" id="estat-bo-label">
                     <input type="radio" name="estat" value="bo" class="hidden" onchange="updateEstat(this)">
@@ -132,8 +127,8 @@
             </div>
         </div>
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
-            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
+            <label id="lbl-ui-notes" class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
+            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descripció..."></textarea>
         </div>
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Fotografies</label>
@@ -150,20 +145,21 @@
     </div>
 </div>
 
-<!-- PANELL 2: Gestió de Dades -->
+<!-- PANELL 2: Gestió de Dades i Configuració -->
 <div id="tools-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[85vh] flex flex-col">
     <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
         <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i data-lucide="database" class="text-gray-500"></i> Gestió de Dades
+            <i data-lucide="settings" class="text-gray-500"></i> Gestió i Configuració
         </h1>
         <button onclick="closeAllPanels()" class="text-gray-500 hover:bg-gray-100 p-2 rounded-full"><i data-lucide="x"></i></button>
     </div>
-    <div class="p-5 overflow-y-auto flex flex-col gap-3">
+    <div class="p-5 overflow-y-auto flex flex-col gap-3 pb-10">
+        
         <div class="text-center font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
             Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
         </div>
 
-        <!-- Casella per modificar manualment l'índex dels punts (Evita duplicats QGIS) -->
+        <!-- Numeració manual -->
         <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
             <label for="custom-start-num" class="text-sm font-semibold text-gray-700">Començar numeració pel punt:</label>
             <div class="flex items-center gap-1">
@@ -172,13 +168,38 @@
             </div>
         </div>
 
-        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 border border-blue-200 mt-2">
+        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 border border-blue-200 mt-1">
             <i data-lucide="send" class="w-5 h-5"></i> Configurar Bot de Telegram
         </button>
-        <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
-            <strong>📐 QGIS:</strong> Exporta el GeoJSON i importa'l directament a QGIS. Les fotos es carreguen des de Telegram via URL.
+
+        <div class="h-px bg-gray-100 my-2"></div>
+        
+        <!-- NOU: Personalitzar Noms dels Camps -->
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Personalitzar Noms dels Camps</p>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-16">Camp 1:</span>
+                <input type="text" id="conf-lbl-codi" class="border border-gray-300 p-2 rounded text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-16">Camp 2:</span>
+                <input type="text" id="conf-lbl-tipus" class="border border-gray-300 p-2 rounded text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-16">Camp 3:</span>
+                <input type="text" id="conf-lbl-estat" class="border border-gray-300 p-2 rounded text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-16">Camp 4:</span>
+                <input type="text" id="conf-lbl-notes" class="border border-gray-300 p-2 rounded text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button onclick="saveCustomLabels()" class="w-full bg-gray-800 text-white py-2 rounded-lg font-bold hover:bg-gray-900 mt-1 shadow-sm">
+                Guardar Noms
+            </button>
         </div>
-        <div class="h-px bg-gray-100"></div>
+
+        <div class="h-px bg-gray-100 my-2"></div>
+
         <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Exportar</p>
         <button onclick="exportDataAsZip()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-green-700 shadow-sm">
             <i data-lucide="folder-down"></i> Exportar ZIP (GeoJSON)
@@ -186,13 +207,14 @@
         <button onclick="exportGeoJSONonly()" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-700 shadow-sm">
             <i data-lucide="file-down"></i> Exportar GeoJSON directe
         </button>
-        <div class="h-px bg-gray-100"></div>
+        
+        <div class="h-px bg-gray-100 my-2"></div>
         <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Importar</p>
         <label class="flex items-center justify-center gap-2 w-full bg-purple-50 text-purple-700 py-3 rounded-lg font-semibold cursor-pointer hover:bg-purple-100 border border-purple-200">
             <i data-lucide="upload" class="w-5 h-5"></i> Importar GeoJSON
             <input type="file" accept=".geojson,.json" class="hidden" onchange="importGeoJSON(event)">
         </label>
-        <div class="h-px bg-gray-100"></div>
+        <div class="h-px bg-gray-100 my-2"></div>
         <button onclick="clearData()" class="w-full bg-red-50 text-red-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 border border-red-200">
             <i data-lucide="trash-2"></i> Esborrar totes les dades
         </button>
@@ -243,6 +265,50 @@ let map, userMarker, currentLat = null, currentLon = null;
 let currentPhotosFiles = [];
 let previewUrls = [];
 let savedPoints = [];
+
+// ─── Camps Personalitzables ────────────────────────────────────
+let customLabels = {
+    codi: "Codi / Referència",
+    tipus: "Tipus",
+    estat: "Estat",
+    notes: "Apunts i Observacions"
+};
+
+function loadCustomLabels() {
+    const stored = localStorage.getItem('custom_labels_config');
+    if (stored) {
+        try { customLabels = { ...customLabels, ...JSON.parse(stored) }; } catch(e){}
+    }
+    // Actualitzar textos al Formulari
+    document.getElementById('lbl-ui-codi').innerHTML  = `${customLabels.codi} <span class="text-gray-400 font-normal text-xs">(opcional)</span>`;
+    document.getElementById('lbl-ui-tipus').innerText = customLabels.tipus;
+    document.getElementById('lbl-ui-estat').innerText = customLabels.estat;
+    document.getElementById('lbl-ui-notes').innerText = customLabels.notes;
+
+    // Actualitzar textos a la Configuració
+    document.getElementById('conf-lbl-codi').value  = customLabels.codi;
+    document.getElementById('conf-lbl-tipus').value = customLabels.tipus;
+    document.getElementById('conf-lbl-estat').value = customLabels.estat;
+    document.getElementById('conf-lbl-notes').value = customLabels.notes;
+}
+
+function saveCustomLabels() {
+    customLabels.codi  = document.getElementById('conf-lbl-codi').value || "Codi / Referència";
+    customLabels.tipus = document.getElementById('conf-lbl-tipus').value || "Tipus";
+    customLabels.estat = document.getElementById('conf-lbl-estat').value || "Estat";
+    customLabels.notes = document.getElementById('conf-lbl-notes').value || "Apunts i Observacions";
+    
+    localStorage.setItem('custom_labels_config', JSON.stringify(customLabels));
+    loadCustomLabels();
+    showNotification("✅ Noms dels camps actualitzats!");
+
+    // Redibuixar mapes perquè els popups agafin els nous noms
+    if (map) {
+        map.eachLayer((layer) => { if (layer instanceof L.Marker && layer !== userMarker) map.removeLayer(layer); });
+        savedPoints.forEach(f => addMarkerToMap(f));
+    }
+}
+
 
 // ─── Telegram: dades al dispositiu, mai al codi ────────────────
 let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
@@ -316,7 +382,6 @@ const backdrop  = document.getElementById('backdrop');
 const formPanel = document.getElementById('form-panel');
 const toolsPanel= document.getElementById('tools-panel');
 
-// Funció que calcula el proper número, tenint en compte l'ajust manual de l'usuari
 function getNextPointNumber() {
     const customStart = parseInt(localStorage.getItem('custom_start_num')) || 1;
     const nums = savedPoints.map(f=>f.properties.num_punt).filter(n=>typeof n==='number');
@@ -324,7 +389,6 @@ function getNextPointNumber() {
     return Math.max(customStart, maxSaved + 1);
 }
 
-// Funció per actualitzar l'inici manual (quan s'escriu a la casella de configuració)
 function updateCustomStartNum(val) {
     const num = parseInt(val);
     if(!isNaN(num) && num > 0) {
@@ -342,9 +406,7 @@ function openFormPanel() {
 }
 
 function openToolsPanel() {
-    // Actualitzar la casella visualment al obrir el panell
     document.getElementById('custom-start-num').value = getNextPointNumber();
-    
     backdrop.classList.remove('hidden');
     setTimeout(()=>toolsPanel.classList.remove('translate-y-full'), 10);
 }
@@ -450,7 +512,6 @@ async function handlePhoto(event) {
         await new Promise(r=>setTimeout(r,300)); // respira entre fotos
 
         await new Promise((resolve) => {
-            // Llegim el fitxer original per extreure EXIF
             const readerExif = new FileReader();
             readerExif.onload = function(evEx) {
                 const originalBase64 = evEx.target.result;
@@ -466,7 +527,6 @@ async function handlePhoto(event) {
                     canvas.toBlob(function(blob) {
                         canvas.width=0; canvas.height=0;
                         if (!blob) { resolve(); return; }
-                        // Llegim el blob comprimit i li reinjectem EXIF GPS
                         const r2 = new FileReader();
                         r2.onload = function(e2) {
                             let finalBase64 = e2.target.result;
@@ -474,7 +534,6 @@ async function handlePhoto(event) {
                                 const exifBin = buildExifWithGPS(originalBase64, currentLat||0, currentLon||0);
                                 finalBase64   = piexif.insert(exifBin, finalBase64);
                             } catch(ex) { console.warn('EXIF error:', ex); }
-                            // Converteix base64 final a Blob per guardar
                             fetch(finalBase64).then(r=>r.blob()).then(finalBlob=>{
                                 currentPhotosFiles.push(finalBlob);
                                 const prevUrl = URL.createObjectURL(finalBlob);
@@ -566,14 +625,15 @@ function addMarkerToMap(feature, isImported=false) {
     
     let html=`<div class="popup-content"><div class="popup-id">Punt #${props.num_punt||'?'}${props.codi?' · '+props.codi:''}</div>`;
     
-    if(props.tipus) html+=`<div class="popup-row"><b>Tipus:</b> ${props.tipus}</div>`;
+    // Utilitzar customLabels per mostrar els noms que ha triat l'usuari
+    if(props.tipus) html+=`<div class="popup-row"><b>${customLabels.tipus}:</b> ${props.tipus}</div>`;
     
     if(props.estat) {
         const emoji = {'bo':'✅', 'regular':'⚠️', 'dolent':'❌'}[props.estat] || '';
-        html+=`<div class="popup-row"><b>Estat:</b> ${emoji} ${props.estat}</div>`;
+        html+=`<div class="popup-row"><b>${customLabels.estat}:</b> ${emoji} ${props.estat}</div>`;
     }
     
-    if(props.notes) html+=`<div class="popup-row"><b>Notes:</b> ${props.notes}</div>`;
+    if(props.notes) html+=`<div class="popup-row"><b>${customLabels.notes}:</b> ${props.notes}</div>`;
     
     const urls=(props.foto_urls&&props.foto_urls.length>0)?props.foto_urls:(props.fotos&&props.fotos.length>0?props.fotos:[]);
     if(urls.length>0){
@@ -690,11 +750,17 @@ window.exportDataAsZip = exportDataAsZip;
 window.exportGeoJSONonly = exportGeoJSONonly;
 window.importGeoJSON = importGeoJSON;
 window.clearData = clearData;
+window.saveCustomLabels = saveCustomLabels;
 
 window.onload = () => {
+    loadCustomLabels();
     initMap();
     if (!TG_TOKEN || !TG_CHAT_ID) setTimeout(()=>openTelegramModal(), 600);
 };
 </script>
 </body>
 </html>
+
+
+```
+
