@@ -65,7 +65,7 @@
         class="bg-white p-3 rounded-full shadow-lg text-blue-600 hover:bg-gray-100 flex justify-center items-center">
         <i data-lucide="crosshair"></i>
     </button>
-    <button onclick="openFormPanel()" title="Nou punt"
+    <button onclick="openNewPointForm()" title="Nou punt"
         class="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 flex justify-center items-center transition transform active:scale-95">
         <i data-lucide="plus" class="w-8 h-8"></i>
     </button>
@@ -73,11 +73,11 @@
 
 <div id="backdrop" class="fixed inset-0 bg-black/40 z-[500] hidden" onclick="closeAllPanels()"></div>
 
-<!-- PANELL 1: Nou Punt -->
+<!-- PANELL 1: Nou/Editar Punt -->
 <div id="form-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[92vh] flex flex-col">
     <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
         <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i data-lucide="map-pin" class="text-red-500"></i> Nou Punt
+            <i data-lucide="map-pin" class="text-red-500"></i> <span id="form-title-text">Nou Punt</span>
         </h1>
         <div class="flex items-center gap-2">
             <span id="new-point-id" class="text-xs bg-blue-50 text-blue-600 font-mono px-2 py-1 rounded-full border border-blue-200"></span>
@@ -87,12 +87,8 @@
         </div>
     </div>
     <div class="p-5 overflow-y-auto flex flex-col gap-4">
-        <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-700">
+        <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-700" id="form-info-gps">
             <i data-lucide="info" class="inline w-4 h-4"></i> Si no tens GPS, tanca i toca el mapa per situar-te.
-        </div>
-        <div class="bg-purple-50 p-3 rounded-lg text-xs text-purple-700 flex items-center gap-2">
-            <span class="text-base">✈️</span>
-            <span>Les fotos es pujaran a <strong>Telegram</strong>. Necessites connexió.</span>
         </div>
         <div class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 font-mono flex justify-between items-center">
             <div><strong>X:</strong> <span id="lat-display">Buscant...</span></div>
@@ -136,7 +132,7 @@
             <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
         </div>
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">Fotografies</label>
+            <label class="font-semibold text-gray-700 text-sm">Fotografies <span class="text-gray-400 font-normal text-xs" id="edit-photo-info"></span></label>
             <label class="border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold p-4 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-100">
                 <i data-lucide="camera"></i>
                 <span id="photo-label">Fer fotos o seleccionar-ne</span>
@@ -145,7 +141,7 @@
             <div id="photo-preview-container" class="hidden mt-2 grid grid-cols-2 gap-2"></div>
         </div>
         <button onclick="savePoint()" class="w-full bg-blue-600 text-white py-4 mt-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md">
-            <i data-lucide="save"></i> Guardar Punt al Mapa
+            <i data-lucide="save"></i> <span id="btn-save-text">Guardar Punt al Mapa</span>
         </button>
     </div>
 </div>
@@ -163,7 +159,6 @@
             Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
         </div>
 
-        <!-- Casella per modificar manualment l'índex dels punts (Evita duplicats QGIS) -->
         <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
             <label for="custom-start-num" class="text-sm font-semibold text-gray-700">Començar numeració pel punt:</label>
             <div class="flex items-center gap-1">
@@ -199,7 +194,7 @@
     </div>
 </div>
 
-<!-- MODAL: Configuració Telegram (obligatòri al primer ús) -->
+<!-- MODAL: Configuració Telegram -->
 <div id="telegram-modal" class="fixed inset-0 z-[700] hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTelegramModalIfConfigured()"></div>
     <div class="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-md overflow-hidden">
@@ -243,6 +238,7 @@ let map, userMarker, currentLat = null, currentLon = null;
 let currentPhotosFiles = [];
 let previewUrls = [];
 let savedPoints = [];
+let editingPointId = null; // Nou: per saber si estem editant
 
 // ─── Telegram: dades al dispositiu, mai al codi ────────────────
 let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
@@ -311,12 +307,11 @@ async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     }
 }
 
-// ─── Panells ──────────────────────────────────────────────────
+// ─── Panells i Lògica d'Edició ────────────────────────────────
 const backdrop  = document.getElementById('backdrop');
 const formPanel = document.getElementById('form-panel');
 const toolsPanel= document.getElementById('tools-panel');
 
-// Funció que calcula el proper número, tenint en compte l'ajust manual de l'usuari
 function getNextPointNumber() {
     const customStart = parseInt(localStorage.getItem('custom_start_num')) || 1;
     const nums = savedPoints.map(f=>f.properties.num_punt).filter(n=>typeof n==='number');
@@ -324,7 +319,6 @@ function getNextPointNumber() {
     return Math.max(customStart, maxSaved + 1);
 }
 
-// Funció per actualitzar l'inici manual (quan s'escriu a la casella de configuració)
 function updateCustomStartNum(val) {
     const num = parseInt(val);
     if(!isNaN(num) && num > 0) {
@@ -333,18 +327,94 @@ function updateCustomStartNum(val) {
     }
 }
 
-function openFormPanel() {
+// Obre formulari per a NOU punt
+function openNewPointForm() {
+    editingPointId = null; // Resetejem mode edició
+    
+    // UI adaptada per Nou Punt
+    document.getElementById('form-title-text').innerText = "Nou Punt";
+    document.getElementById('btn-save-text').innerText = "Guardar Punt al Mapa";
+    document.getElementById('edit-photo-info').innerText = "";
+    document.getElementById('form-info-gps').classList.remove('hidden');
     document.getElementById('new-point-id').innerText = `#${getNextPointNumber()}`;
+    
+    // Netejar camps
+    document.getElementById('codi').value = '';
+    document.getElementById('tipus').value = '';
+    document.getElementById('notes').value = '';
+    
     document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
-    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1'));
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    
+    // Netejar fotos temporal
+    document.getElementById('photoInput').value = '';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
+
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+}
+
+// Obre formulari per a EDITAR un punt existent
+function editPoint(id) {
+    const feature = savedPoints.find(f => f.id === id);
+    if (!feature) return;
+
+    editingPointId = id; // Activem el mode edició
+    
+    // UI adaptada per Editar Punt
+    document.getElementById('form-title-text').innerText = "Editar Punt";
+    document.getElementById('btn-save-text').innerText = "Actualitzar Punt";
+    document.getElementById('form-info-gps').classList.add('hidden');
+    
+    // Carregar ubicació antiga al formulari (sense moure l'usuari físicament)
+    currentLon = feature.geometry.coordinates[0];
+    currentLat = feature.geometry.coordinates[1];
+    const utm = wgs84ToUtm31(currentLon, currentLat);
+    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
+    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
+    if (userMarker) userMarker.setLatLng([currentLat, currentLon]); // Movem la rodoneta allà
+
+    // Carregar dades
+    document.getElementById('new-point-id').innerText = `#${feature.properties.num_punt}`;
+    document.getElementById('codi').value = feature.properties.codi || '';
+    document.getElementById('tipus').value = feature.properties.tipus || '';
+    document.getElementById('notes').value = feature.properties.notes || '';
+
+    // Carregar estat
+    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    if (feature.properties.estat) {
+        const radio = document.querySelector(`input[name="estat"][value="${feature.properties.estat}"]`);
+        if (radio) {
+            radio.checked = true;
+            updateEstat(radio);
+        }
+    }
+
+    // Preparar secció fotos (les existents es guarden, permet afegir-ne més)
+    document.getElementById('photoInput').value = '';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Afegir més fotos (opcional)";
+    
+    const fotosPrevies = feature.properties.n_fotos || 0;
+    if(fotosPrevies > 0) {
+        document.getElementById('edit-photo-info').innerText = `(Ja té ${fotosPrevies} fotos anteriors)`;
+    } else {
+        document.getElementById('edit-photo-info').innerText = "";
+    }
+
+    // Tancar el Popup del mapa per visualitzar millor
+    map.closePopup();
+    
     backdrop.classList.remove('hidden');
     setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
 }
 
 function openToolsPanel() {
-    // Actualitzar la casella visualment al obrir el panell
     document.getElementById('custom-start-num').value = getNextPointNumber();
-    
     backdrop.classList.remove('hidden');
     setTimeout(()=>toolsPanel.classList.remove('translate-y-full'), 10);
 }
@@ -381,7 +451,19 @@ function initMap() {
     const osm        = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OSM'});
     esriStreet.addTo(map);
     L.control.layers({"Carrers":esriStreet,"Satèl·lit":esriSat,"OSM":osm},{},{position:'topright'}).addTo(map);
-    map.on('click',e=>{ updatePosition(e.latlng.lat,e.latlng.lng); showNotification("📍 Coordenades actualitzades.",false,true); });
+    
+    // Evitem actualitzar coordenades lliurement si estem en mode edició, per no moure el punt per accident
+    map.on('click',e=>{ 
+        if(editingPointId === null) {
+            updatePosition(e.latlng.lat,e.latlng.lng); 
+            showNotification("📍 Coordenades actualitzades.",false,true); 
+        } else {
+            // Si estem editant, permetem re-ubicar manualment però avisant
+            updatePosition(e.latlng.lat,e.latlng.lng);
+            showNotification("📍 S'ha desplaçat la ubicació del punt.",false,true);
+        }
+    });
+    
     loadSavedPoints();
     locateUser();
     setTimeout(()=>map.invalidateSize(), 500);
@@ -404,37 +486,19 @@ function locateUser() {
     document.getElementById('lat-display').innerText = "Buscant...";
     document.getElementById('lon-display').innerText = "Buscant...";
     navigator.geolocation.getCurrentPosition(
-        p=>{ updatePosition(p.coords.latitude,p.coords.longitude); map.flyTo([p.coords.latitude,p.coords.longitude],17); showNotification("✅ GPS trobat!"); },
+        p=>{ 
+            // Si estem editant, moure's amb el GPS reubicarà el punt actual. Avisem a l'usuari.
+            if(editingPointId !== null) showNotification("📍 Atenció: S'està reubicant el punt a la teva posició GPS.", false, true);
+            updatePosition(p.coords.latitude,p.coords.longitude); 
+            map.flyTo([p.coords.latitude,p.coords.longitude],17); 
+            if(editingPointId === null) showNotification("✅ GPS trobat!"); 
+        },
         ()=>showNotification("Sense GPS. Toca el mapa.",true),
         {enableHighAccuracy:true,maximumAge:10000,timeout:12000}
     );
 }
 
-// ─── EXIF GPS helpers ─────────────────────────────────────────
-function decimalToExifGPS(decimal) {
-    const d   = Math.abs(decimal);
-    const deg = Math.floor(d);
-    const min = Math.floor((d-deg)*60);
-    const sec = Math.round(((d-deg)*60-min)*60*100);
-    return [[deg,1],[min,1],[sec,100]];
-}
-
-function buildExifWithGPS(originalBase64, lat, lon) {
-    let exifObj = {"0th":{},"Exif":{},"GPS":{},"1st":{}};
-    try { if(originalBase64) exifObj = piexif.load(originalBase64); } catch(e) {}
-    exifObj["GPS"][piexif.GPSIFD.GPSLatitudeRef]  = lat>=0?'N':'S';
-    exifObj["GPS"][piexif.GPSIFD.GPSLatitude]     = decimalToExifGPS(lat);
-    exifObj["GPS"][piexif.GPSIFD.GPSLongitudeRef] = lon>=0?'E':'W';
-    exifObj["GPS"][piexif.GPSIFD.GPSLongitude]    = decimalToExifGPS(lon);
-    const now = new Date();
-    const ds  = now.toISOString().slice(0,10).replace(/-/g,':');
-    const ts  = now.toTimeString().slice(0,8);
-    exifObj["0th"][piexif.ImageIFD.DateTime]         = `${ds} ${ts}`;
-    exifObj["Exif"][piexif.ExifIFD.DateTimeOriginal] = `${ds} ${ts}`;
-    return piexif.dump(exifObj);
-}
-
-// ─── Processament de fotos (EXIF GPS conservat) ───────────────
+// ─── Processament de fotos ───────────────────────────────
 async function handlePhoto(event) {
     const files = event.target.files;
     if (!files || !files.length) return;
@@ -443,66 +507,45 @@ async function handlePhoto(event) {
     previewContainer.classList.remove('hidden');
     const disponibles = MAX_FOTOS - currentPhotosFiles.length;
     const aProcessar  = Math.min(files.length, disponibles);
-    if (disponibles<=0) { showNotification(`Màxim ${MAX_FOTOS} fotos.`,true); return; }
+    if (disponibles<=0) { showNotification(`Màxim ${MAX_FOTOS} fotos noves per vegada.`,true); return; }
 
     for (let i=0; i<aProcessar; i++) {
         document.getElementById('photo-label').innerText = `Processant foto ${i+1} de ${aProcessar}...`;
-        await new Promise(r=>setTimeout(r,300)); // respira entre fotos
+        await new Promise(r=>setTimeout(r,300)); 
 
         await new Promise((resolve) => {
-            // Llegim el fitxer original per extreure EXIF
-            const readerExif = new FileReader();
-            readerExif.onload = function(evEx) {
-                const originalBase64 = evEx.target.result;
-                const objectUrl = URL.createObjectURL(files[i]);
-                const img = new Image();
-                img.onload = function() {
-                    URL.revokeObjectURL(objectUrl);
-                    const scale = img.width>MAX_WIDTH ? MAX_WIDTH/img.width : 1;
-                    const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
-                    const canvas = document.createElement('canvas');
-                    canvas.width=w; canvas.height=h;
-                    canvas.getContext('2d').drawImage(img,0,0,w,h);
-                    canvas.toBlob(function(blob) {
-                        canvas.width=0; canvas.height=0;
-                        if (!blob) { resolve(); return; }
-                        // Llegim el blob comprimit i li reinjectem EXIF GPS
-                        const r2 = new FileReader();
-                        r2.onload = function(e2) {
-                            let finalBase64 = e2.target.result;
-                            try {
-                                const exifBin = buildExifWithGPS(originalBase64, currentLat||0, currentLon||0);
-                                finalBase64   = piexif.insert(exifBin, finalBase64);
-                            } catch(ex) { console.warn('EXIF error:', ex); }
-                            // Converteix base64 final a Blob per guardar
-                            fetch(finalBase64).then(r=>r.blob()).then(finalBlob=>{
-                                currentPhotosFiles.push(finalBlob);
-                                const prevUrl = URL.createObjectURL(finalBlob);
-                                previewUrls.push(prevUrl);
-                                const imgEl = document.createElement('img');
-                                imgEl.src = prevUrl;
-                                imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
-                                previewContainer.appendChild(imgEl);
-                                resolve();
-                            });
-                        };
-                        r2.onerror = ()=>resolve();
-                        r2.readAsDataURL(blob);
-                    }, 'image/jpeg', QUALITY);
-                };
-                img.onerror = ()=>resolve();
-                img.src = objectUrl;
+            const objectUrl = URL.createObjectURL(files[i]);
+            const img = new Image();
+            img.onload = function() {
+                URL.revokeObjectURL(objectUrl);
+                const scale = img.width>MAX_WIDTH ? MAX_WIDTH/img.width : 1;
+                const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+                const canvas = document.createElement('canvas');
+                canvas.width=w; canvas.height=h;
+                canvas.getContext('2d').drawImage(img,0,0,w,h);
+                canvas.toBlob(function(blob) {
+                    canvas.width=0; canvas.height=0;
+                    if (!blob) { resolve(); return; }
+                    currentPhotosFiles.push(blob);
+                    const prevUrl = URL.createObjectURL(blob);
+                    previewUrls.push(prevUrl);
+                    const imgEl = document.createElement('img');
+                    imgEl.src = prevUrl;
+                    imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
+                    previewContainer.appendChild(imgEl);
+                    resolve();
+                }, 'image/jpeg', QUALITY);
             };
-            readerExif.onerror = ()=>resolve();
-            readerExif.readAsDataURL(files[i]);
+            img.onerror = ()=>resolve();
+            img.src = objectUrl;
         });
     }
-    document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es afegida/es ✓`;
-    if (files.length>aProcessar) showNotification(`Límit de ${MAX_FOTOS} fotos.`,false,true);
+    document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es nova/es preparades ✓`;
+    if (files.length>aProcessar) showNotification(`S'han limitat a ${MAX_FOTOS} fotos noves.`,false,true);
     event.target.value='';
 }
 
-// ─── Guardar punt ─────────────────────────────────────────────
+// ─── Guardar / Actualitzar punt ─────────────────────────────────────────────
 async function savePoint() {
     if (currentLat===null || currentLon===null) {
         showNotification("Espera GPS o toca el mapa.",true); return;
@@ -512,38 +555,79 @@ async function savePoint() {
     const tipus  = document.getElementById('tipus').value;
     const estatR = document.querySelector('input[name="estat"]:checked');
     const estat  = estatR ? estatR.value : '';
-    const numPunt = getNextPointNumber();
+    
+    // Determinar si estem editant o creant
+    const isEditing = editingPointId !== null;
+    let featureToEdit = null;
+    let numPunt;
 
-    let telegramUrls=[], telegramIds=[];
+    if (isEditing) {
+        featureToEdit = savedPoints.find(f => f.id === editingPointId);
+        numPunt = featureToEdit.properties.num_punt;
+    } else {
+        numPunt = getNextPointNumber();
+    }
+
+    let newTelegramUrls=[], newTelegramIds=[];
     if (currentPhotosFiles.length>0) {
         showNotification("📤 Pujant fotos a Telegram...",false,true);
         for (let i=0; i<currentPhotosFiles.length; i++) {
-            const r = await uploadPhotoToTelegram(currentPhotosFiles[i], numPunt, i+1);
-            if (r) { telegramUrls.push(r.fileUrl); telegramIds.push(r.fileId); }
-            else showNotification(`⚠️ No s'ha pogut pujar la foto ${i+1}.`,true);
+            // Si estem afegint fotos a un punt que ja en tenia, sumem a l'índex per no sobreescriure text a TG
+            const startIdx = isEditing ? (featureToEdit.properties.n_fotos || 0) : 0;
+            const r = await uploadPhotoToTelegram(currentPhotosFiles[i], numPunt, startIdx + i + 1);
+            if (r) { newTelegramUrls.push(r.fileUrl); newTelegramIds.push(r.fileId); }
+            else showNotification(`⚠️ No s'ha pogut pujar la foto nova ${i+1}.`,true);
         }
-        if (telegramUrls.length>0) showNotification(`✅ ${telegramUrls.length} foto/es a Telegram!`);
+        if (newTelegramUrls.length>0) showNotification(`✅ ${newTelegramUrls.length} foto/es pujades a Telegram!`);
     }
 
-    const newFeature = {
-        type:"Feature", id:Date.now().toString(),
-        geometry:{type:"Point",coordinates:[parseFloat(currentLon.toFixed(8)),parseFloat(currentLat.toFixed(8))]},
-        properties:{
-            num_punt: numPunt, codi:codi||'', tipus:tipus||'', estat:estat||'',
-            notes:notes||'', data_hora:new Date().toISOString(),
-            utm_x:wgs84ToUtm31(currentLon,currentLat).x,
-            utm_y:wgs84ToUtm31(currentLon,currentLat).y,
-            lat:parseFloat(currentLat.toFixed(8)), lon:parseFloat(currentLon.toFixed(8)),
-            n_fotos:currentPhotosFiles.length, foto_urls:telegramUrls, foto_ids:telegramIds, fotos:[]
+    if (isEditing) {
+        // Actualitzar característiques del punt existent
+        featureToEdit.geometry.coordinates = [parseFloat(currentLon.toFixed(8)), parseFloat(currentLat.toFixed(8))];
+        featureToEdit.properties.codi = codi;
+        featureToEdit.properties.tipus = tipus;
+        featureToEdit.properties.estat = estat;
+        featureToEdit.properties.notes = notes;
+        featureToEdit.properties.utm_x = wgs84ToUtm31(currentLon,currentLat).x;
+        featureToEdit.properties.utm_y = wgs84ToUtm31(currentLon,currentLat).y;
+        featureToEdit.properties.lat = parseFloat(currentLat.toFixed(8));
+        featureToEdit.properties.lon = parseFloat(currentLon.toFixed(8));
+        
+        // Afegir fotos noves si n'hi ha
+        if(newTelegramUrls.length > 0) {
+            const oldUrls = featureToEdit.properties.foto_urls || [];
+            const oldIds = featureToEdit.properties.foto_ids || [];
+            featureToEdit.properties.foto_urls = [...oldUrls, ...newTelegramUrls];
+            featureToEdit.properties.foto_ids = [...oldIds, ...newTelegramIds];
+            featureToEdit.properties.n_fotos = (featureToEdit.properties.n_fotos || 0) + newTelegramUrls.length;
         }
-    };
 
-    savedPoints.push(newFeature);
-    localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
-    addMarkerToMap(newFeature);
-    updatePointsCount();
+        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+        showNotification(`✅ Punt #${numPunt} actualitzat!`);
 
-    // Reset
+    } else {
+        // Crear nou punt
+        const newFeature = {
+            type:"Feature", id:Date.now().toString(),
+            geometry:{type:"Point",coordinates:[parseFloat(currentLon.toFixed(8)),parseFloat(currentLat.toFixed(8))]},
+            properties:{
+                num_punt: numPunt, codi:codi, tipus:tipus, estat:estat,
+                notes:notes, data_hora:new Date().toISOString(),
+                utm_x:wgs84ToUtm31(currentLon,currentLat).x,
+                utm_y:wgs84ToUtm31(currentLon,currentLat).y,
+                lat:parseFloat(currentLat.toFixed(8)), lon:parseFloat(currentLon.toFixed(8)),
+                n_fotos:currentPhotosFiles.length, foto_urls:newTelegramUrls, foto_ids:newTelegramIds, fotos:[]
+            }
+        };
+        savedPoints.push(newFeature);
+        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+        showNotification(`✅ Punt #${numPunt} guardat!`);
+    }
+
+    refreshMapMarkers();
+
+    // Reset general
+    editingPointId = null;
     document.getElementById('notes').value='';
     document.getElementById('codi').value='';
     document.getElementById('tipus').value='';
@@ -554,10 +638,21 @@ async function savePoint() {
     const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
     document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
     closeAllPanels();
-    showNotification(`✅ Punt #${numPunt} guardat!`);
 }
 
 // ─── Marcadors al mapa ────────────────────────────────────────
+function refreshMapMarkers() {
+    // Esborrem els marcadors previs del mapa
+    map.eachLayer((layer) => {
+        if (layer instanceof L.Marker && layer !== userMarker) {
+            map.removeLayer(layer);
+        }
+    });
+    // Pintem tots els punts de nou actualitzats
+    savedPoints.forEach(f => addMarkerToMap(f));
+    updatePointsCount();
+}
+
 function addMarkerToMap(feature, isImported=false) {
     const coords=feature.geometry.coordinates, props=feature.properties||{};
     const color={'bo':'#22c55e','regular':'#f59e0b','dolent':'#ef4444'}[props.estat]||(isImported?'#8b5cf6':'#ef4444');
@@ -584,6 +679,12 @@ function addMarkerToMap(feature, isImported=false) {
     } else if(props.n_fotos>0) html+=`<div class="popup-fotos-label">📷 ${props.n_fotos} foto/es a Telegram</div>`;
     
     if(props.data_hora){ const d=new Date(props.data_hora); html+=`<div style="margin-top:6px;font-size:10px;color:#9ca3af;">${isNaN(d)?props.data_hora:d.toLocaleString('ca-ES')}</div>`; }
+    
+    // Botó d'edició afegit al final del Popup
+    html += `<div style="margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; text-align:right;">
+                <button onclick="editPoint('${feature.id}')" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.2);">✏️ Edita</button>
+             </div>`;
+    
     html+=`</div>`;
     marker.bindPopup(html,{maxWidth:300});
 }
@@ -591,7 +692,7 @@ function addMarkerToMap(feature, isImported=false) {
 function loadSavedPoints() {
     try {
         const stored=localStorage.getItem('inspeccions_qgis');
-        if(stored){ savedPoints=JSON.parse(stored); savedPoints.forEach(f=>addMarkerToMap(f)); updatePointsCount(); }
+        if(stored){ savedPoints=JSON.parse(stored); refreshMapMarkers(); }
     } catch(e){ showNotification("Error carregant dades locals.",true); }
 }
 
@@ -612,10 +713,11 @@ function importGeoJSON(event) {
                 if(fid&&ids.has(fid)){ dups++; return; }
                 if(!f.properties) f.properties={};
                 if(!f.properties.fotos) f.properties.fotos=[];
-                savedPoints.push(f); addMarkerToMap(f,true); afegits++;
+                if(!f.id) f.id = Date.now().toString() + Math.random().toString(36).substr(2, 5); // Garantim ID per edició
+                savedPoints.push(f); afegits++;
             });
             localStorage.setItem('inspeccions_qgis',JSON.stringify(savedPoints));
-            updatePointsCount();
+            refreshMapMarkers();
             try{ const b=L.geoJSON(features).getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[60,60]}); }catch(_){}
             closeAllPanels();
             showNotification(`✅ ${afegits} punt/s importat/s${dups>0?` (${dups} dups ignorats)`:''}!`);
@@ -691,7 +793,8 @@ window.updateCustomStartNum = updateCustomStartNum;
 window.openToolsPanel = openToolsPanel;
 window.closeAllPanels = closeAllPanels;
 window.locateUser = locateUser;
-window.openFormPanel = openFormPanel;
+window.openNewPointForm = openNewPointForm;
+window.editPoint = editPoint;
 window.updateEstat = updateEstat;
 window.handlePhoto = handlePhoto;
 window.savePoint = savePoint;
@@ -704,12 +807,11 @@ window.importGeoJSON = importGeoJSON;
 window.clearData = clearData;
 
 window.onload = () => {
-    // ─── LÒGICA NOVA: Interceptar si és el mode "Visor d'Imatges" ───
+    // ─── Interceptar si és el mode "Visor d'Imatges" des de QGIS ───
     const urlParams = new URLSearchParams(window.location.search);
     const viewImg = urlParams.get('view_img');
     
     if (viewImg) {
-        // Mode Visor: Ocultem el mapa i mostrem només la imatge processada correctament
         document.title = "Visor de Fotografia";
         document.body.innerHTML = `
             <div style="background-color: #111827; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; padding: 20px; box-sizing: border-box; font-family: sans-serif;">
@@ -720,10 +822,9 @@ window.onload = () => {
                 </div>
             </div>
         `;
-        return; // Aturem aquí perquè no es carregui res de l'app principal
+        return; 
     }
 
-    // Si no estem al mode visor, iniciem l'app normalment
     initMap();
     if (!TG_TOKEN || !TG_CHAT_ID) setTimeout(()=>openTelegramModal(), 600);
 };
