@@ -2,49 +2,47 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
-    <!-- Evita que l'usuari pugui fer zoom amb els dits per donar sensació d'App nativa -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inspecció de Camp</title>
 
-    <!-- ═══ CONFIGURACIÓ PWA (App instal·lable) ═══════════════════════════════════════ -->
-    <!-- Manifest amb icones PNG vàlides per a Android 10 i versions antigues -->
-    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiSW5zcGVjY2nDsyBkZSBDYW1wIiwic2hvcnRfbmFtZSI6Ikluc3BlY2Npw7MiLCJkZXNjcmlwdGlvbiI6IlJlY29sbGlkYSBkZSBkYWRlcyBhbWIgZXhwb3J0YWNpw7MgYSBRR0lTIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMyNTYzZWIiLCJ0aGVtZV9jb2xvciI6IiMyNTYzZWIiLCJpY29ucyI6W3sic3JjIjoiaHR0cHM6Ly91cGxvYWQud2lraW1lZGlhLm9yZy93atpcGVkaWEvY29tbW9ucy90aHVtYi9lL2VkL01hcF9waW5faWNvbi5zdmcvMTkycHgtTWFwX3Bpbl9pY29uLnN2Zy5wbmciLCJzaXplcyI6IjE5MngxOTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9LHsic3JjIjoiaHR0cHM6Ly91cGxvYWQud2lraW1lZGlhLm9yZy93atpcGVkaWEvY29tbW9ucy90aHVtYi9lL2VkL01hcF9waW5faWNvbi5zdmcvNTEycHgtTWFwX3Bpbl9pY29uLnN2Zy5wbmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9XX0=">
+    <!-- ═══ PWA: fa desaparèixer la barra del navegador ═══════════ -->
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiSW5zcGVjY2nDsyBkZSBDYW1wIiwic2hvcnRfbmFtZSI6Ikluc3BlY2Npw7MiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YzZjRmNiIsInRoZW1lX2NvbG9yIjoiIzI1NjNlYiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL3VwbG9hZC53aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iL2UvZWQvTWFwX3Bpbl9pY29uLnN2Zy8xOTJweC1NYXBfcGluX2ljb24uc3ZnLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imh0dHBzOi8vdXBsb2FkLndpa2ltZWRpYS5vcmcvd2lraXBlZGlhL2NvbW1vbnMvdGh1bWIvZS9lZC9NYXBfcGluX2ljb24uc3ZnLzUxMnB4LU1hcF9waW5faWNvbi5zdmcucG5nIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJ9XX0=">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Inspecció">
     <meta name="theme-color" content="#2563eb">
-    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/192px-Map_pin_icon.svg.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/192px-Map_pin_icon.svg.png">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/512px-Map_pin_icon.svg.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/512px-Map_pin_icon.svg.png">
 
-    <!-- ═══ LLIBRERIES EXTERNES ═══════════════════════════════════════════════════════ -->
-    <!-- Tailwind CSS (Estils visuals de l'aplicació) -->
+    <!-- Motor Service Worker per enganyar a Chrome i que permeti l'App 100% Nativa -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', e => self.skipWaiting());
+                    self.addEventListener('activate', e => self.clients.claim());
+                    self.addEventListener('fetch', e => {});
+                `;
+                const blob = new Blob([swCode], {type: 'application/javascript'});
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(() => {});
+            });
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet (Motor del mapa) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <!-- Lucide (Icones SVG) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- JSZip (Per generar arxius .zip en exportar) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Proj4js (Per convertir coordenades GPS a UTM per QGIS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-    <!-- Piexifjs (Per injectar les coordenades GPS a dins de la foto) -->
-    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
 
-    <!-- ═══ ESTILS CSS PERSONALITZATS ════════════════════════════════════════════════ -->
     <style>
-        /* Configuració bàsica perquè l'app ocupi el 100% de la pantalla sense fer scroll global */
         body, html { margin:0; padding:0; height:100%; width:100%; overflow:hidden; background:#f3f4f6; }
-        
-        /* El contenidor del mapa ocupa tota la pantalla i queda al fons (z-index 1) */
         #map { height:100vh; width:100%; z-index:1; }
-        
-        /* Estilització de la barra de desplaçament (scroll) dels panells */
         ::-webkit-scrollbar { width:6px; }
         ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
-        
-        /* Disseny de les notificacions flotants (missatges verds o vermells) */
         #notification-area {
             position:fixed; top:20px; left:50%; transform:translateX(-50%);
             z-index:9999; width:90%; max-width:400px;
@@ -56,8 +54,6 @@
         }
         .notification.error { background:#ef4444; }
         .notification.info  { background:#3b82f6; }
-        
-        /* Disseny del contingut de les bafarades (popups) del mapa */
         .popup-content { font-size:13px; min-width:200px; max-width:280px; }
         .popup-content b { color:#374151; }
         .popup-content .popup-id {
@@ -71,30 +67,28 @@
 </head>
 <body class="relative">
 
-<!-- Zona on apareixeran les notificacions -->
 <div id="notification-area"></div>
-
-<!-- Contenidor principal del Mapa -->
 <div id="map"></div>
 
-<!-- ═══ BOTONS FLOTANTS (Part inferior dreta) ════════════════════════════════════ -->
+<!-- Botons flotants -->
 <div class="fixed bottom-8 right-4 flex flex-col gap-4 z-[400]">
-    <button onclick="openToolsPanel()" title="Gestió de dades" class="bg-white p-3 rounded-full shadow-lg text-gray-700 hover:bg-gray-100 flex justify-center items-center">
+    <button onclick="openToolsPanel()" title="Gestió de dades"
+        class="bg-white p-3 rounded-full shadow-lg text-gray-700 hover:bg-gray-100 flex justify-center items-center">
         <i data-lucide="settings"></i>
     </button>
-    <button onclick="locateUser()" title="Localitzar-me" class="bg-white p-3 rounded-full shadow-lg text-blue-600 hover:bg-gray-100 flex justify-center items-center">
+    <button onclick="locateUser()" title="Localitzar-me"
+        class="bg-white p-3 rounded-full shadow-lg text-blue-600 hover:bg-gray-100 flex justify-center items-center">
         <i data-lucide="crosshair"></i>
     </button>
-    <button onclick="openNewPointForm()" title="Nou punt" class="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 flex justify-center items-center transition transform active:scale-95">
+    <button onclick="openNewPointForm()" title="Nou punt"
+        class="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 flex justify-center items-center transition transform active:scale-95">
         <i data-lucide="plus" class="w-8 h-8"></i>
     </button>
 </div>
 
-<!-- Fons fosc semi-transparent que apareix quan s'obre un panell -->
 <div id="backdrop" class="fixed inset-0 bg-black/40 z-[500] hidden" onclick="closeAllPanels()"></div>
 
-<!-- ═══ PANELL 1: FORMULARI DE PUNT (Nou o Editar) ════════════════════════════════ -->
-<!-- S'oculta desplaçant-se cap a baix (translate-y-full) -->
+<!-- PANELL 1: Nou/Editar Punt -->
 <div id="form-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[92vh] flex flex-col">
     <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
         <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -108,7 +102,6 @@
         </div>
     </div>
     <div class="p-5 overflow-y-auto flex flex-col gap-4">
-        <!-- Missatges d'informació -->
         <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-700" id="form-info-gps">
             <i data-lucide="info" class="inline w-4 h-4"></i> Si no tens GPS, tanca i toca el mapa per situar-te.
         </div>
@@ -116,15 +109,11 @@
             <span class="text-base">✈️</span>
             <span>Les fotos es pujaran a <strong>Telegram</strong>. Necessites connexió.</span>
         </div>
-        
-        <!-- Indicador de coordenades actuals -->
         <div class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 font-mono flex justify-between items-center">
             <div><strong>X:</strong> <span id="lat-display">Buscant...</span></div>
             <div><strong>Y:</strong> <span id="lon-display">Buscant...</span></div>
             <button onclick="locateUser()" class="text-blue-500 p-1"><i data-lucide="locate" class="w-4 h-4"></i></button>
         </div>
-
-        <!-- Camps de text i selecció -->
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Codi / Referència <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
             <input type="text" id="codi" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: SEC-01, ARBRE-23...">
@@ -140,8 +129,6 @@
                 <option value="altres">Altres</option>
             </select>
         </div>
-        
-        <!-- Botons d'estat (Bo, Regular, Dolent) -->
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Estat</label>
             <div class="flex gap-2">
@@ -159,30 +146,26 @@
                 </label>
             </div>
         </div>
-
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
             <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
         </div>
-
-        <!-- Càrrega de fotos -->
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Fotografies <span class="text-gray-400 font-normal text-xs" id="edit-photo-info"></span></label>
             <label class="border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold p-4 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-100">
                 <i data-lucide="camera"></i>
-                <span id="photo-label">Càmera o seleccionar-ne</span>
-                <input type="file" id="photoInput" accept="image/*" multiple class="hidden" onchange="handlePhoto(event)">
+                <span id="photo-label">Fer fotos o seleccionar-ne</span>
+                <input type="file" id="photoInput" accept="image/*" capture="environment" multiple class="hidden" onchange="handlePhoto(event)">
             </label>
             <div id="photo-preview-container" class="hidden mt-2 grid grid-cols-2 gap-2"></div>
         </div>
-
         <button onclick="savePoint()" class="w-full bg-blue-600 text-white py-4 mt-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md">
             <i data-lucide="save"></i> <span id="btn-save-text">Guardar Punt al Mapa</span>
         </button>
     </div>
 </div>
 
-<!-- ═══ PANELL 2: GESTIÓ DE DADES (Importar/Exportar) ════════════════════════════ -->
+<!-- PANELL 2: Gestió de Dades -->
 <div id="tools-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[85vh] flex flex-col">
     <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
         <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -207,7 +190,7 @@
             <i data-lucide="send" class="w-5 h-5"></i> Configurar Bot de Telegram
         </button>
         <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
-            <strong>📐 QGIS:</strong> A la taula d'atributs, fes clic al camp <code>enllac_visor</code> per obrir la foto de forma integrada al navegador.
+            <strong>📐 QGIS:</strong> A la taula d'atributs, fes clic al camp <code>enllac_visor</code> per obrir la foto de forma integrada al navegador, evitant problemes de caducitat.
         </div>
         <div class="h-px bg-gray-100"></div>
         <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Exportar</p>
@@ -230,8 +213,7 @@
     </div>
 </div>
 
-<!-- ═══ MODAL: CONFIGURACIÓ DE TELEGRAM ═══════════════════════════════════════════ -->
-<!-- Apareix per sobre de tota la pantalla per demanar els codis de l'API de Telegram -->
+<!-- MODAL: Configuració Telegram -->
 <div id="telegram-modal" class="fixed inset-0 z-[700] hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTelegramModalIfConfigured()"></div>
     <div class="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-md overflow-hidden">
@@ -267,106 +249,17 @@
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════════════════════════
-     MÒDULS JAVASCRIPT LÒGICS
-     A partir d'aquí, el codi està dividit en blocs funcionals per evitar que tocar
-     una cosa en trenqui una altra.
-═════════════════════════════════════════════════════════════════════════════════ -->
 <script>
-lucide.createIcons(); // Inicia les icones SVG
+lucide.createIcons();
 
-// ==============================================================================
-// 1. VARIABLES GLOBALS I ESTAT DE L'APLICACIÓ
-// ==============================================================================
-let map;                     // L'objecte del mapa Leaflet
-let userMarker;              // El punt blau que marca la nostra posició
-let currentLat = null;       // Latitud actual (Temporal pel formulari)
-let currentLon = null;       // Longitud actual (Temporal pel formulari)
-let currentPhotosFiles = []; // Llista temporal d'arxius d'imatge preparats per pujar
-let previewUrls = [];        // Llista d'URLs temporals per previsualitzar les fotos
-let savedPoints = [];        // L'Array principal que guarda tota la informació dels punts
-let editingPointId = null;   // Si no és null, conté l'ID del punt que estem editant
+// ─── Variables globals ─────────────────────────────────────────
+let map, userMarker, currentLat = null, currentLon = null;
+let currentPhotosFiles = [];
+let previewUrls = [];
+let savedPoints = [];
+let editingPointId = null;
 
-// ==============================================================================
-// 2. MÒDUL DE LA INTERFÍCIE (PANELLS I NOTIFICACIONS)
-// Funcions encarregades d'obrir, tancar i netejar les pestanyes de l'App.
-// ==============================================================================
-const backdrop  = document.getElementById('backdrop');
-const formPanel = document.getElementById('form-panel');
-const toolsPanel= document.getElementById('tools-panel');
-
-// Mostra un missatge flotant de color a dalt de la pantalla
-function showNotification(msg, isError=false, isInfo=false) {
-    const area  = document.getElementById('notification-area');
-    const notif = document.createElement('div');
-    notif.className = `notification ${isError?'error':''} ${isInfo?'info':''}`;
-    notif.innerText = msg;
-    area.appendChild(notif);
-    // S'esvaeix sol al cap de 3 segons
-    setTimeout(()=>{ notif.style.opacity='0'; setTimeout(()=>notif.remove(),500); }, 3500);
-}
-
-// Obre la pestanya per CREAR un punt des de zero
-function openNewPointForm() {
-    editingPointId = null; // Assegurem que no estem en mode edició
-    
-    // Adaptem els textos del panell per a un "Nou Punt"
-    document.getElementById('form-title-text').innerText = "Nou Punt";
-    document.getElementById('btn-save-text').innerText = "Guardar Punt al Mapa";
-    document.getElementById('edit-photo-info').innerText = "";
-    document.getElementById('form-info-gps').classList.remove('hidden');
-    document.getElementById('new-point-id').innerText = `#${getNextPointNumber()}`;
-    
-    // Netejem tots els camps del formulari
-    document.getElementById('codi').value = '';
-    document.getElementById('tipus').value = '';
-    document.getElementById('notes').value = '';
-    
-    // Desmarquem els botons d'estat
-    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
-    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
-    
-    // Buidem la llista de fotografies pendents
-    document.getElementById('photoInput').value = '';
-    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
-    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
-    document.getElementById('photo-label').innerText="Càmera o seleccionar-ne";
-
-    // Mostrem el panell lliscant amunt
-    backdrop.classList.remove('hidden');
-    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
-}
-
-// Obre el panell de Configuració / Exportació
-function openToolsPanel() {
-    document.getElementById('custom-start-num').value = getNextPointNumber();
-    backdrop.classList.remove('hidden');
-    setTimeout(()=>toolsPanel.classList.remove('translate-y-full'), 10);
-}
-
-// Tanca tots els panells oberts
-function closeAllPanels() {
-    formPanel.classList.add('translate-y-full');
-    toolsPanel.classList.add('translate-y-full');
-    setTimeout(()=>backdrop.classList.add('hidden'), 300); // Temps perquè acabi l'animació CSS
-}
-
-// Pinta de color el botó d'estat corresponent quan l'usuari el clica
-function updateEstat(radio) {
-    // Primer treu el color de tots els botons
-    document.querySelectorAll('[id^=estat-]').forEach(l=>
-        l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
-    // Després assigna el color al botó tocat
-    const colors={bo:['ring-green-400','bg-green-50'],regular:['ring-yellow-400','bg-yellow-50'],dolent:['ring-red-400','bg-red-50']};
-    const lbl = document.getElementById(`estat-${radio.value}-label`);
-    if(lbl && colors[radio.value]) lbl.classList.add('ring-2','ring-offset-1',...colors[radio.value]);
-}
-
-
-// ==============================================================================
-// 3. MÒDUL TELEGRAM I CREDENCIALS
-// Gestió de les dades privades de l'API desades a la memòria del telèfon.
-// ==============================================================================
+// ─── Telegram: dades al dispositiu, mai al codi ────────────────
 let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
 let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 
@@ -376,7 +269,6 @@ function openTelegramModal() {
     const modal = document.getElementById('telegram-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    // Amagar el botó "Tancar" si encara no s'han configurat mai
     document.getElementById('btn-cancel-tg').classList.toggle('hidden', !TG_TOKEN || !TG_CHAT_ID);
 }
 
@@ -394,19 +286,56 @@ function saveTelegramConfig() {
     const t = document.getElementById('tg-token-input').value.trim();
     const c = document.getElementById('tg-chatid-input').value.trim();
     if (!t || !c) { showNotification("Omple els dos camps.", true); return; }
-    
-    // Guardar en la memòria persistent (LocalStorage)
     TG_TOKEN   = t;
     TG_CHAT_ID = c;
     localStorage.setItem('tg_token',   TG_TOKEN);
     localStorage.setItem('tg_chat_id', TG_CHAT_ID);
-    
     showNotification("✅ Configuració guardada al dispositiu!");
     document.getElementById('telegram-modal').classList.add('hidden');
     document.getElementById('telegram-modal').classList.remove('flex');
 }
 
-// Funció que es connecta al servidor de Telegram per pujar-hi la imatge comprimida
+// ─── FUNCIÓ MÀGICA: Refrescar imatges caducades de Telegram ────
+window.refreshTelegramImage = async function(img, fileId) {
+    if (!fileId || img.dataset.retried) {
+        img.style.display = 'none'; // Si falla amaguem la imatge trencada
+        return;
+    }
+    img.dataset.retried = 'true'; // Evitem bucles infinits
+    
+    const token = localStorage.getItem('tg_token');
+    if (!token) {
+        console.warn("Falta el Token de Telegram per refrescar la imatge.");
+        return;
+    }
+    
+    try {
+        const resp = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+        const data = await resp.json();
+        if (data.ok) {
+            const freshUrl = `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+            img.src = freshUrl; // Canviem la imatge al vol
+            
+            // Si estem en mode visor, actualitzem també el botó de descàrrega
+            const downloadBtn = document.getElementById('viewer-download-btn');
+            if(downloadBtn) downloadBtn.href = freshUrl;
+        } else {
+            img.style.display = 'none';
+        }
+    } catch(e) {
+        console.error('Error refrescant imatge:', e);
+        img.style.display = 'none';
+    }
+};
+
+// ─── Projecció EPSG:25831 ──────────────────────────────────────
+proj4.defs("EPSG:25831","+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+function wgs84ToUtm31(lon, lat) {
+    const [x,y] = proj4("EPSG:4326","EPSG:25831",[lon,lat]);
+    return { x: Math.round(x*100)/100, y: Math.round(y*100)/100 };
+}
+
+// ─── Telegram upload ───────────────────────────────────────────
 async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     if (!TG_TOKEN || !TG_CHAT_ID) {
         showNotification("Configura el Bot de Telegram primer.", true);
@@ -415,233 +344,26 @@ async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     try {
         const fd = new FormData();
         fd.append('chat_id', TG_CHAT_ID);
-        fd.append('caption', `Punt #${numPunt} · Foto ${fotoIndex}`); // Text del missatge al xat
+        fd.append('caption', `Punt #${numPunt} · Foto ${fotoIndex}`);
         fd.append('photo', blob, `foto_punt${numPunt}_${fotoIndex}.jpg`);
-        
-        // Cridem l'API de Telegram
         const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {method:'POST', body:fd});
         const data = await resp.json();
-        
         if (!data.ok) { console.error('Telegram:', data); return null; }
-        
-        // Obtenim l'ID únic de l'arxiu pujat i en demanem la URL de descàrrega
         const fileId   = data.result.photo[data.result.photo.length-1].file_id;
         const fileResp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
         const fileData = await fileResp.json();
-        
-        return { 
-            fileId, 
-            fileUrl: `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}` 
-        };
+        return { fileId, fileUrl: `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}` };
     } catch(err) {
         console.error('Error pujant foto:', err);
         return null;
     }
 }
 
+// ─── Panells i Lògica d'Edició ────────────────────────────────
+const backdrop  = document.getElementById('backdrop');
+const formPanel = document.getElementById('form-panel');
+const toolsPanel= document.getElementById('tools-panel');
 
-// ==============================================================================
-// 4. MÒDUL DEL MAPA I GEOLOCALITZACIÓ
-// Control del visor de mapes i lectura del GPS del mòbil.
-// ==============================================================================
-
-// Projecció necessària per a QGIS: Converteix coordenades globals (WGS84) a UTM Zona 31N.
-proj4.defs("EPSG:25831","+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
-function wgs84ToUtm31(lon, lat) {
-    const [x,y] = proj4("EPSG:4326","EPSG:25831",[lon,lat]);
-    return { x: Math.round(x*100)/100, y: Math.round(y*100)/100 };
-}
-
-// Genera i dibuixa el mapa base
-function initMap() {
-    map = L.map('map',{zoomControl:false}).setView([41.7286,1.8201],14); // Catalunya
-    L.control.zoom({position:'topright'}).addTo(map);
-    
-    // Afegim diferents capes visuals (Satèl·lit i Carrers)
-    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'&copy; Esri'});
-    const esriSat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'&copy; Esri'});
-    const osm        = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OSM'});
-    
-    esriStreet.addTo(map);
-    L.control.layers({"Carrers":esriStreet,"Satèl·lit":esriSat,"OSM":osm},{},{position:'topright'}).addTo(map);
-    
-    // Si fas un clic llarg o toques el mapa manualment, s'actualitzen les coordenades allà
-    map.on('click',e=>{ 
-        if(editingPointId === null) {
-            updatePosition(e.latlng.lat,e.latlng.lng); 
-            showNotification("📍 Coordenades actualitzades manualment.",false,true); 
-        } else {
-            // Permet moure un punt existent en mode edició
-            updatePosition(e.latlng.lat,e.latlng.lng);
-            showNotification("📍 S'ha desplaçat la ubicació del punt.",false,true);
-        }
-    });
-    
-    loadSavedPoints(); // Carreguem els punts que ja estiguessin guardats abans
-    locateUser();      // Demanem al mòbil que ens busqui
-    
-    // Repara problemes de renderitzat al carregar
-    setTimeout(()=>map.invalidateSize(), 500);
-}
-
-// Pinta el nostre cercle blau i actualitza els textos dels panells amb les coordenades
-function updatePosition(lat, lon) {
-    currentLat = lat; currentLon = lon;
-    const utm = wgs84ToUtm31(lon, lat);
-    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
-    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
-    
-    const ll = [lat,lon];
-    if (userMarker) { 
-        userMarker.setLatLng(ll); 
-    } else {
-        userMarker = L.marker(ll,{icon:L.divIcon({className:'',html:"<div style='background:#3b82f6;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 4px rgba(59,130,246,0.3);'></div>",iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:1000}).addTo(map);
-    }
-}
-
-// Activa el maquinari GPS del dispositiu
-function locateUser() {
-    if(!navigator.geolocation){ showNotification("Sense suport GPS",true); return; }
-    document.getElementById('lat-display').innerText = "Buscant...";
-    document.getElementById('lon-display').innerText = "Buscant...";
-    
-    navigator.geolocation.getCurrentPosition(
-        p=>{ 
-            if(editingPointId !== null) showNotification("📍 Atenció: S'està reubicant el punt a la teva posició GPS.", false, true);
-            updatePosition(p.coords.latitude,p.coords.longitude); 
-            map.flyTo([p.coords.latitude,p.coords.longitude],17); 
-            if(editingPointId === null) showNotification("✅ GPS trobat!"); 
-        },
-        ()=>showNotification("Sense GPS. Toca el mapa per ubicar-te.",true),
-        {enableHighAccuracy:true,maximumAge:10000,timeout:12000}
-    );
-}
-
-
-// ==============================================================================
-// 5. MÒDUL DE FOTOGRAFIES I EXIF
-// Funcions especialitzades en comprimir la imatge estalviant memòria RAM,
-// i incrustant-hi les metadades GPS dins del propi arxiu fotogràfic (EXIF).
-// ==============================================================================
-
-// Converteix coordinades decimals (41.123) al format natiu EXIF (Graus/Min/Segons)
-function decimalToExifGPS(decimal) {
-    const d   = Math.abs(decimal);
-    const deg = Math.floor(d);
-    const min = Math.floor((d-deg)*60);
-    const sec = Math.round(((d-deg)*60-min)*60*100);
-    return [[deg,1],[min,1],[sec,100]];
-}
-
-// Agafa la foto i hi "clava" les coordenades a dins (útil per altres visors)
-function buildExifWithGPS(originalBase64, lat, lon) {
-    let exifObj = {"0th":{},"Exif":{},"GPS":{},"1st":{}};
-    try { if(originalBase64) exifObj = piexif.load(originalBase64); } catch(e) {}
-    exifObj["GPS"][piexif.GPSIFD.GPSLatitudeRef]  = lat>=0?'N':'S';
-    exifObj["GPS"][piexif.GPSIFD.GPSLatitude]     = decimalToExifGPS(lat);
-    exifObj["GPS"][piexif.GPSIFD.GPSLongitudeRef] = lon>=0?'E':'W';
-    exifObj["GPS"][piexif.GPSIFD.GPSLongitude]    = decimalToExifGPS(lon);
-    
-    const now = new Date();
-    const ds  = now.toISOString().slice(0,10).replace(/-/g,':');
-    const ts  = now.toTimeString().slice(0,8);
-    exifObj["0th"][piexif.ImageIFD.DateTime]         = `${ds} ${ts}`;
-    exifObj["Exif"][piexif.ExifIFD.DateTimeOriginal] = `${ds} ${ts}`;
-    
-    return piexif.dump(exifObj);
-}
-
-// S'executa quan l'usuari selecciona o fa una foto amb la càmera
-async function handlePhoto(event) {
-    const files = event.target.files;
-    if (!files || !files.length) return;
-    
-    const MAX_WIDTH=800;  // Resolució de la foto final (no col·lapsarà Telegram ni el mòbil)
-    const QUALITY=0.65;   // Compressió JPEG
-    const MAX_FOTOS=5;    // Límit per punt
-    
-    const previewContainer = document.getElementById('photo-preview-container');
-    previewContainer.classList.remove('hidden');
-    
-    const disponibles = MAX_FOTOS - currentPhotosFiles.length;
-    const aProcessar  = Math.min(files.length, disponibles);
-    
-    if (disponibles<=0) { showNotification(`Màxim ${MAX_FOTOS} fotos per vegada.`,true); return; }
-
-    for (let i=0; i<aProcessar; i++) {
-        document.getElementById('photo-label').innerText = `Processant foto ${i+1} de ${aProcessar}...`;
-        await new Promise(r=>setTimeout(r,300)); // Petita pausa per no petar la memòria RAM del mòbil
-
-        await new Promise((resolve) => {
-            const readerExif = new FileReader();
-            // Llegeix l'arxiu original abans de comprimir-lo
-            readerExif.onload = function(evEx) {
-                const originalBase64 = evEx.target.result;
-                const objectUrl = URL.createObjectURL(files[i]);
-                const img = new Image();
-                img.onload = function() {
-                    URL.revokeObjectURL(objectUrl);
-                    
-                    // Creem un llenç invisible on dibuixar la foto més petita
-                    const scale = img.width>MAX_WIDTH ? MAX_WIDTH/img.width : 1;
-                    const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
-                    const canvas = document.createElement('canvas');
-                    canvas.width=w; canvas.height=h;
-                    canvas.getContext('2d').drawImage(img,0,0,w,h);
-                    
-                    // Convertim el dibuix (canvas) en arxiu (blob)
-                    canvas.toBlob(function(blob) {
-                        // Neteja extrema de memòria immediata
-                        canvas.width=0; canvas.height=0;
-                        if (!blob) { resolve(); return; }
-                        
-                        // Injectem l'EXIF a l'arxiu acabat de comprimir
-                        const r2 = new FileReader();
-                        r2.onload = function(e2) {
-                            let finalBase64 = e2.target.result;
-                            try {
-                                const exifBin = buildExifWithGPS(originalBase64, currentLat||0, currentLon||0);
-                                finalBase64   = piexif.insert(exifBin, finalBase64);
-                            } catch(ex) { console.warn('EXIF error:', ex); }
-                            
-                            // Tornem a transformar la foto (amb les dades GPS a dins) en un Blob per guardar-la
-                            fetch(finalBase64).then(r=>r.blob()).then(finalBlob=>{
-                                currentPhotosFiles.push(finalBlob);
-                                const prevUrl = URL.createObjectURL(finalBlob);
-                                previewUrls.push(prevUrl);
-                                
-                                // Pintem la miniatura de previsualització al formulari
-                                const imgEl = document.createElement('img');
-                                imgEl.src = prevUrl;
-                                imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
-                                previewContainer.appendChild(imgEl);
-                                resolve();
-                            });
-                        };
-                        r2.onerror = ()=>resolve();
-                        r2.readAsDataURL(blob);
-                    }, 'image/jpeg', QUALITY);
-                };
-                img.onerror = ()=>resolve();
-                img.src = objectUrl;
-            };
-            readerExif.onerror = ()=>resolve();
-            readerExif.readAsDataURL(files[i]);
-        });
-    }
-    document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es nova/es preparades ✓`;
-    if (files.length>aProcessar) showNotification(`S'han limitat a ${MAX_FOTOS} fotos noves.`,false,true);
-    event.target.value=''; // Resetejem l'input de l'HTML
-}
-
-
-// ==============================================================================
-// 6. MÒDUL DE GESTIÓ DE DADES (CREAR, EDITAR I MOSTRAR)
-// Funcions encarregades d'escriure la informació recollida a l'Array de dades
-// i dibuixar els marcadors/xinxetes sobre el mapa.
-// ==============================================================================
-
-// Calcula si el proper punt ha de ser el #1, el següent de la llista, o el que s'hagi posat a Ajustos
 function getNextPointNumber() {
     const customStart = parseInt(localStorage.getItem('custom_start_num')) || 1;
     const nums = savedPoints.map(f=>f.properties.num_punt).filter(n=>typeof n==='number');
@@ -649,7 +371,6 @@ function getNextPointNumber() {
     return Math.max(customStart, maxSaved + 1);
 }
 
-// Funció activada pel botó de canviar l'índex
 function updateCustomStartNum(val) {
     const num = parseInt(val);
     if(!isNaN(num) && num > 0) {
@@ -658,20 +379,218 @@ function updateCustomStartNum(val) {
     }
 }
 
-// Funció principal en clicar "Guardar" o "Actualitzar"
+function openNewPointForm() {
+    editingPointId = null;
+    document.getElementById('form-title-text').innerText = "Nou Punt";
+    document.getElementById('btn-save-text').innerText = "Guardar Punt al Mapa";
+    document.getElementById('edit-photo-info').innerText = "";
+    document.getElementById('form-info-gps').classList.remove('hidden');
+    document.getElementById('new-point-id').innerText = `#${getNextPointNumber()}`;
+    
+    document.getElementById('codi').value = '';
+    document.getElementById('tipus').value = '';
+    document.getElementById('notes').value = '';
+    
+    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    
+    document.getElementById('photoInput').value = '';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
+
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+}
+
+function editPoint(id) {
+    const feature = savedPoints.find(f => f.id === id);
+    if (!feature) return;
+
+    editingPointId = id; 
+    document.getElementById('form-title-text').innerText = "Editar Punt";
+    document.getElementById('btn-save-text').innerText = "Actualitzar Punt";
+    document.getElementById('form-info-gps').classList.add('hidden');
+    
+    currentLon = feature.geometry.coordinates[0];
+    currentLat = feature.geometry.coordinates[1];
+    const utm = wgs84ToUtm31(currentLon, currentLat);
+    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
+    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
+    if (userMarker) userMarker.setLatLng([currentLat, currentLon]); 
+
+    document.getElementById('new-point-id').innerText = `#${feature.properties.num_punt}`;
+    document.getElementById('codi').value = feature.properties.codi || '';
+    document.getElementById('tipus').value = feature.properties.tipus || '';
+    document.getElementById('notes').value = feature.properties.notes || '';
+
+    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    if (feature.properties.estat) {
+        const radio = document.querySelector(`input[name="estat"][value="${feature.properties.estat}"]`);
+        if (radio) {
+            radio.checked = true;
+            updateEstat(radio);
+        }
+    }
+
+    document.getElementById('photoInput').value = '';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Afegir més fotos (opcional)";
+    
+    const fotosPrevies = feature.properties.n_fotos || 0;
+    if(fotosPrevies > 0) {
+        document.getElementById('edit-photo-info').innerText = `(Ja té ${fotosPrevies} fotos anteriors)`;
+    } else {
+        document.getElementById('edit-photo-info').innerText = "";
+    }
+
+    map.closePopup();
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+}
+
+function openToolsPanel() {
+    document.getElementById('custom-start-num').value = getNextPointNumber();
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>toolsPanel.classList.remove('translate-y-full'), 10);
+}
+
+function closeAllPanels() {
+    formPanel.classList.add('translate-y-full');
+    toolsPanel.classList.add('translate-y-full');
+    setTimeout(()=>backdrop.classList.add('hidden'), 300);
+}
+
+function updateEstat(radio) {
+    document.querySelectorAll('[id^=estat-]').forEach(l=>
+        l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    const colors={bo:['ring-green-400','bg-green-50'],regular:['ring-yellow-400','bg-yellow-50'],dolent:['ring-red-400','bg-red-50']};
+    const lbl = document.getElementById(`estat-${radio.value}-label`);
+    if(lbl && colors[radio.value]) lbl.classList.add('ring-2','ring-offset-1',...colors[radio.value]);
+}
+
+function showNotification(msg, isError=false, isInfo=false) {
+    const area  = document.getElementById('notification-area');
+    const notif = document.createElement('div');
+    notif.className = `notification ${isError?'error':''} ${isInfo?'info':''}`;
+    notif.innerText = msg;
+    area.appendChild(notif);
+    setTimeout(()=>{ notif.style.opacity='0'; setTimeout(()=>notif.remove(),500); }, 3500);
+}
+
+// ─── Mapa ──────────────────────────────────────────────────────
+function initMap() {
+    map = L.map('map',{zoomControl:false}).setView([41.7286,1.8201],14);
+    L.control.zoom({position:'topright'}).addTo(map);
+    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'&copy; Esri'});
+    const esriSat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'&copy; Esri'});
+    const osm        = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OSM'});
+    esriStreet.addTo(map);
+    L.control.layers({"Carrers":esriStreet,"Satèl·lit":esriSat,"OSM":osm},{},{position:'topright'}).addTo(map);
+    
+    map.on('click',e=>{ 
+        if(editingPointId === null) {
+            updatePosition(e.latlng.lat,e.latlng.lng); 
+            showNotification("📍 Coordenades actualitzades.",false,true); 
+        } else {
+            updatePosition(e.latlng.lat,e.latlng.lng);
+            showNotification("📍 S'ha desplaçat la ubicació del punt.",false,true);
+        }
+    });
+    
+    loadSavedPoints();
+    locateUser();
+    setTimeout(()=>map.invalidateSize(), 500);
+}
+
+function updatePosition(lat, lon) {
+    currentLat = lat; currentLon = lon;
+    const utm = wgs84ToUtm31(lon, lat);
+    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
+    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
+    const ll = [lat,lon];
+    if (userMarker) { userMarker.setLatLng(ll); }
+    else {
+        userMarker = L.marker(ll,{icon:L.divIcon({className:'',html:"<div style='background:#3b82f6;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 4px rgba(59,130,246,0.3);'></div>",iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:1000}).addTo(map);
+    }
+}
+
+function locateUser() {
+    if(!navigator.geolocation){ showNotification("Sense suport GPS",true); return; }
+    document.getElementById('lat-display').innerText = "Buscant...";
+    document.getElementById('lon-display').innerText = "Buscant...";
+    navigator.geolocation.getCurrentPosition(
+        p=>{ 
+            if(editingPointId !== null) showNotification("📍 Atenció: S'està reubicant el punt a la teva posició GPS.", false, true);
+            updatePosition(p.coords.latitude,p.coords.longitude); 
+            map.flyTo([p.coords.latitude,p.coords.longitude],17); 
+            if(editingPointId === null) showNotification("✅ GPS trobat!"); 
+        },
+        ()=>showNotification("Sense GPS. Toca el mapa.",true),
+        {enableHighAccuracy:true,maximumAge:10000,timeout:12000}
+    );
+}
+
+// ─── Processament de fotos ───────────────────────────────
+async function handlePhoto(event) {
+    const files = event.target.files;
+    if (!files || !files.length) return;
+    const MAX_WIDTH=800, QUALITY=0.65, MAX_FOTOS=5;
+    const previewContainer = document.getElementById('photo-preview-container');
+    previewContainer.classList.remove('hidden');
+    const disponibles = MAX_FOTOS - currentPhotosFiles.length;
+    const aProcessar  = Math.min(files.length, disponibles);
+    if (disponibles<=0) { showNotification(`Màxim ${MAX_FOTOS} fotos noves per vegada.`,true); return; }
+
+    for (let i=0; i<aProcessar; i++) {
+        document.getElementById('photo-label').innerText = `Processant foto ${i+1} de ${aProcessar}...`;
+        await new Promise(r=>setTimeout(r,300)); 
+
+        await new Promise((resolve) => {
+            const objectUrl = URL.createObjectURL(files[i]);
+            const img = new Image();
+            img.onload = function() {
+                URL.revokeObjectURL(objectUrl);
+                const scale = img.width>MAX_WIDTH ? MAX_WIDTH/img.width : 1;
+                const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+                const canvas = document.createElement('canvas');
+                canvas.width=w; canvas.height=h;
+                canvas.getContext('2d').drawImage(img,0,0,w,h);
+                canvas.toBlob(function(blob) {
+                    canvas.width=0; canvas.height=0;
+                    if (!blob) { resolve(); return; }
+                    currentPhotosFiles.push(blob);
+                    const prevUrl = URL.createObjectURL(blob);
+                    previewUrls.push(prevUrl);
+                    const imgEl = document.createElement('img');
+                    imgEl.src = prevUrl;
+                    imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
+                    previewContainer.appendChild(imgEl);
+                    resolve();
+                }, 'image/jpeg', QUALITY);
+            };
+            img.onerror = ()=>resolve();
+            img.src = objectUrl;
+        });
+    }
+    document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es nova/es preparades ✓`;
+    if (files.length>aProcessar) showNotification(`S'han limitat a ${MAX_FOTOS} fotos noves.`,false,true);
+    event.target.value='';
+}
+
+// ─── Guardar / Actualitzar punt ─────────────────────────────────────────────
 async function savePoint() {
     if (currentLat===null || currentLon===null) {
-        showNotification("Espera GPS o toca el mapa per situar-te abans de guardar.",true); return;
+        showNotification("Espera GPS o toca el mapa.",true); return;
     }
-    
-    // Recopilem les dades teclejades per l'usuari
     const notes  = document.getElementById('notes').value.trim();
     const codi   = document.getElementById('codi').value.trim();
     const tipus  = document.getElementById('tipus').value;
     const estatR = document.querySelector('input[name="estat"]:checked');
     const estat  = estatR ? estatR.value : '';
     
-    // Verifiquem si estem creant un de nou o sobreescrivint-ne un (Edició)
     const isEditing = editingPointId !== null;
     let featureToEdit = null;
     let numPunt;
@@ -683,12 +602,10 @@ async function savePoint() {
         numPunt = getNextPointNumber();
     }
 
-    // Bloc de pujada de fotos a Telegram
     let newTelegramUrls=[], newTelegramIds=[];
     if (currentPhotosFiles.length>0) {
         showNotification("📤 Pujant fotos a Telegram...",false,true);
         for (let i=0; i<currentPhotosFiles.length; i++) {
-            // Per no repetir el número (ex: "Foto 1") si el punt ja en tenia d'altres anteriorment
             const startIdx = isEditing ? (featureToEdit.properties.n_fotos || 0) : 0;
             const r = await uploadPhotoToTelegram(currentPhotosFiles[i], numPunt, startIdx + i + 1);
             if (r) { newTelegramUrls.push(r.fileUrl); newTelegramIds.push(r.fileId); }
@@ -697,7 +614,6 @@ async function savePoint() {
         if (newTelegramUrls.length>0) showNotification(`✅ ${newTelegramUrls.length} foto/es pujades a Telegram!`);
     }
 
-    // SI ESTEM EDITANT: Substituïm les dades del punt antic
     if (isEditing) {
         featureToEdit.geometry.coordinates = [parseFloat(currentLon.toFixed(8)), parseFloat(currentLat.toFixed(8))];
         featureToEdit.properties.codi = codi;
@@ -709,23 +625,26 @@ async function savePoint() {
         featureToEdit.properties.lat = parseFloat(currentLat.toFixed(8));
         featureToEdit.properties.lon = parseFloat(currentLon.toFixed(8));
         
-        // Si s'han pujat fotos noves, s'afegeixen a les que ja tenia
         if(newTelegramUrls.length > 0) {
-            const oldUrls = featureToEdit.properties.foto_urls || [];
-            const oldIds = featureToEdit.properties.foto_ids || [];
+            let oldUrls = [];
+            if (Array.isArray(featureToEdit.properties.foto_urls)) oldUrls = featureToEdit.properties.foto_urls;
+            else if (typeof featureToEdit.properties.foto_urls === 'string') oldUrls = featureToEdit.properties.foto_urls.split('|').filter(Boolean);
+            
+            let oldIds = [];
+            if (Array.isArray(featureToEdit.properties.foto_ids)) oldIds = featureToEdit.properties.foto_ids;
+            else if (typeof featureToEdit.properties.foto_ids === 'string') oldIds = featureToEdit.properties.foto_ids.split('|').filter(Boolean);
+
             featureToEdit.properties.foto_urls = [...oldUrls, ...newTelegramUrls];
             featureToEdit.properties.foto_ids = [...oldIds, ...newTelegramIds];
             featureToEdit.properties.n_fotos = (featureToEdit.properties.n_fotos || 0) + newTelegramUrls.length;
         }
 
-        // Guardem a la memòria del dispositiu i mostrem èxit
         localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
         showNotification(`✅ Punt #${numPunt} actualitzat!`);
 
     } else {
-        // SI ESTEM CREANT: Construïm l'estructura oficial GeoJSON (Estàndard de mapes)
         const newFeature = {
-            type:"Feature", id:Date.now().toString(),
+            type:"Feature", id:Date.now().toString() + Math.random().toString(36).substr(2, 5),
             geometry:{type:"Point",coordinates:[parseFloat(currentLon.toFixed(8)),parseFloat(currentLat.toFixed(8))]},
             properties:{
                 num_punt: numPunt, codi:codi, tipus:tipus, estat:estat,
@@ -741,130 +660,80 @@ async function savePoint() {
         showNotification(`✅ Punt #${numPunt} guardat!`);
     }
 
-    refreshMapMarkers(); // Dibuixa tots els punts de nou al mapa
+    refreshMapMarkers();
 
-    // Fem neteja a fons de la interfície i de la memòria per preparar l'app pel següent punt
     editingPointId = null;
     document.getElementById('notes').value='';
     document.getElementById('codi').value='';
     document.getElementById('tipus').value='';
     document.getElementById('photoInput').value='';
-    
-    // Buidem la brossa temporal que hagi pogut quedar a la RAM
     previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
     document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
     document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
     const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
-    document.getElementById('photo-label').innerText="Càmera o seleccionar-ne";
-    
+    document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
     closeAllPanels();
 }
 
-// Prepara el formulari per editar: Carrega les dades existents a l'HTML
-function editPoint(id) {
-    const feature = savedPoints.find(f => f.id === id);
-    if (!feature) return;
-
-    editingPointId = id; // Marca la "bandera" dient que estem en mode Edició
-    
-    document.getElementById('form-title-text').innerText = "Editar Punt";
-    document.getElementById('btn-save-text').innerText = "Actualitzar Punt";
-    document.getElementById('form-info-gps').classList.add('hidden');
-    
-    // Recuperem la ubicació sense necessitat del GPS
-    currentLon = feature.geometry.coordinates[0];
-    currentLat = feature.geometry.coordinates[1];
-    const utm = wgs84ToUtm31(currentLon, currentLat);
-    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
-    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
-    if (userMarker) userMarker.setLatLng([currentLat, currentLon]); 
-
-    // Emplenem els textos guardats
-    document.getElementById('new-point-id').innerText = `#${feature.properties.num_punt}`;
-    document.getElementById('codi').value = feature.properties.codi || '';
-    document.getElementById('tipus').value = feature.properties.tipus || '';
-    document.getElementById('notes').value = feature.properties.notes || '';
-
-    // Re-seleccionem el botó de l'estat que hi havia
-    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
-    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
-    if (feature.properties.estat) {
-        const radio = document.querySelector(`input[name="estat"][value="${feature.properties.estat}"]`);
-        if (radio) { radio.checked = true; updateEstat(radio); }
-    }
-
-    // UI de les fotos
-    document.getElementById('photoInput').value = '';
-    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
-    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
-    document.getElementById('photo-label').innerText="Afegir més fotos (opcional)";
-    
-    const fotosPrevies = feature.properties.n_fotos || 0;
-    if(fotosPrevies > 0) { document.getElementById('edit-photo-info').innerText = `(Ja té ${fotosPrevies} fotos anteriors)`; } 
-    else { document.getElementById('edit-photo-info').innerText = ""; }
-
-    map.closePopup(); // Amaguem la bafarada del mapa per veure el formulari clar
-    
-    backdrop.classList.remove('hidden');
-    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
-}
-
-// Buidar el mapa i tornar a posar totes les xinxetes
+// ─── Marcadors al mapa ────────────────────────────────────────
 function refreshMapMarkers() {
-    map.eachLayer((layer) => { if (layer instanceof L.Marker && layer !== userMarker) map.removeLayer(layer); });
+    map.eachLayer((layer) => {
+        if (layer instanceof L.Marker && layer !== userMarker) {
+            map.removeLayer(layer);
+        }
+    });
     savedPoints.forEach(f => addMarkerToMap(f));
     updatePointsCount();
 }
 
-// Llegeix un objecte "Feature" (punt) i hi posa una xinxeta amb el codi HTML corresponent
 function addMarkerToMap(feature, isImported=false) {
     const coords=feature.geometry.coordinates, props=feature.properties||{};
-    
-    // Escollir color segons estat (verd, carbassa o vermell)
     const color={'bo':'#22c55e','regular':'#f59e0b','dolent':'#ef4444'}[props.estat]||(isImported?'#8b5cf6':'#ef4444');
-    
-    // Crear la xinxeta visual de Leaflet
     const icon=L.divIcon({className:'',html:`<div style="background:${color};width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,.35);"></div>`,iconSize:[18,18],iconAnchor:[9,18],popupAnchor:[0,-20]});
     const marker=L.marker([coords[1],coords[0]],{icon}).addTo(map);
     
-    // Construcció de la finestra flotant (Popup) del mapa
     let html=`<div class="popup-content"><div class="popup-id">Punt #${props.num_punt||'?'}${props.codi?' · '+props.codi:''}</div>`;
     
     if(props.tipus) html+=`<div class="popup-row"><b>Tipus:</b> ${props.tipus}</div>`;
+    
     if(props.estat) {
         const emoji = {'bo':'✅', 'regular':'⚠️', 'dolent':'❌'}[props.estat] || '';
         html+=`<div class="popup-row"><b>Estat:</b> ${emoji} ${props.estat}</div>`;
     }
+    
     if(props.notes) html+=`<div class="popup-row"><b>Notes:</b> ${props.notes}</div>`;
     
-    // Afegir la imatge al popup
-    const urls=(props.foto_urls&&props.foto_urls.length>0)?props.foto_urls:(props.fotos&&props.fotos.length>0?props.fotos:[]);
+    let urls = [];
+    if (Array.isArray(props.foto_urls)) urls = props.foto_urls;
+    else if (typeof props.foto_urls === 'string') urls = props.foto_urls.split('|').filter(Boolean);
+    else if (Array.isArray(props.fotos)) urls = props.fotos;
+
+    let ids = [];
+    if (Array.isArray(props.foto_ids)) ids = props.foto_ids;
+    else if (typeof props.foto_ids === 'string') ids = props.foto_ids.split('|').filter(Boolean);
+
     if(urls.length>0){
         html+=`<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">`;
-        urls.slice(0,3).forEach(f=>html+=`<img src="${f}" style="width:100%;max-height:140px;object-fit:cover;border-radius:4px;">`);
+        urls.slice(0,3).forEach((f, index) => {
+            const fileId = ids[index] || '';
+            html+=`<img src="${f}" onerror="refreshTelegramImage(this, '${fileId}')" style="width:100%;max-height:140px;object-fit:cover;border-radius:4px;">`;
+        });
         if(urls.length>3) html+=`<span class="popup-fotos-label">+${urls.length-3} més</span>`;
         html+=`</div>`;
-    } else if(props.n_fotos>0) html+=`<div class="popup-fotos-label">📷 ${props.n_fotos} foto/es a Telegram</div>`;
+    } else if(props.n_fotos>0) {
+        html+=`<div class="popup-fotos-label">📷 ${props.n_fotos} foto/es a Telegram</div>`;
+    }
     
     if(props.data_hora){ const d=new Date(props.data_hora); html+=`<div style="margin-top:6px;font-size:10px;color:#9ca3af;">${isNaN(d)?props.data_hora:d.toLocaleString('ca-ES')}</div>`; }
     
-    // Botó per activar l'edició dins la bafarada
     html += `<div style="margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; text-align:right;">
                 <button onclick="editPoint('${feature.id}')" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.2);">✏️ Edita</button>
-             </div></div>`;
-             
+             </div>`;
+    
+    html+=`</div>`;
     marker.bindPopup(html,{maxWidth:300});
 }
 
-function updatePointsCount() { document.getElementById('points-count').innerText=savedPoints.length; }
-
-
-// ==============================================================================
-// 7. MÒDUL D'IMPORTACIÓ I EXPORTACIÓ
-// Eines per connectar l'aplicació web amb programes professionals com QGIS.
-// ==============================================================================
-
-// En arrancar l'app, demanem al navegador les dades que tenia guardades de l'última vegada
 function loadSavedPoints() {
     try {
         const stored=localStorage.getItem('inspeccions_qgis');
@@ -872,14 +741,8 @@ function loadSavedPoints() {
     } catch(e){ showNotification("Error carregant dades locals.",true); }
 }
 
-// Neteja total de les dades del telèfon (Només fer-ho un cop exportat)
-function clearData() {
-    if(confirm("Segur que vols esborrar les dades del mòbil? Assegura't d'haver-les exportat abans!")){ 
-        localStorage.removeItem('inspeccions_qgis'); location.reload(); 
-    }
-}
+function updatePointsCount() { document.getElementById('points-count').innerText=savedPoints.length; }
 
-// Permet carregar arxius fets en QGIS i veure'ls al mòbil com a punts "Morats"
 function importGeoJSON(event) {
     const file=event.target.files[0]; if(!file) return;
     const reader=new FileReader();
@@ -890,17 +753,14 @@ function importGeoJSON(event) {
             if(!features.length){ showNotification("GeoJSON no vàlid.",true); return; }
             const ids=new Set(savedPoints.map(f=>f.properties?.num_punt||f.id).filter(Boolean));
             let afegits=0, dups=0;
-            
             features.forEach(f=>{
                 const fid=f.properties?.num_punt||f.id;
-                // Si el punt ja existeix a l'app, se salta
                 if(fid&&ids.has(fid)){ dups++; return; }
                 if(!f.properties) f.properties={};
                 if(!f.properties.fotos) f.properties.fotos=[];
-                if(!f.id) f.id = Date.now().toString() + Math.random().toString(36).substr(2, 5); // Garantim ID per permetre edició d'importats
+                if(!f.id) f.id = Date.now().toString() + Math.random().toString(36).substr(2, 5); 
                 savedPoints.push(f); afegits++;
             });
-            
             localStorage.setItem('inspeccions_qgis',JSON.stringify(savedPoints));
             refreshMapMarkers();
             try{ const b=L.geoJSON(features).getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[60,60]}); }catch(_){}
@@ -912,29 +772,32 @@ function importGeoJSON(event) {
     reader.readAsText(file);
 }
 
-// Exportació estàndard en format GeoJSON
+function clearData() {
+    if(confirm("Segur? Assegura't d'exportar primer!")){ localStorage.removeItem('inspeccions_qgis'); location.reload(); }
+}
+
 function exportGeoJSONonly() {
-    if(!savedPoints.length){ showNotification("Sense punts per exportar.",true); return; }
+    if(!savedPoints.length){ showNotification("Sense punts.",true); return; }
     const feats=JSON.parse(JSON.stringify(savedPoints));
     const baseUrl = window.location.origin + window.location.pathname; 
 
     feats.forEach(f=>{
-        const urls=Array.isArray(f.properties.foto_urls)?f.properties.foto_urls:[];
-        // Aquí generem el "Mode Visor" (veure apartat 8 inferior)
-        const viewerUrls = urls.map(u => `${baseUrl}?view_img=${encodeURIComponent(u)}`);
+        const urls = Array.isArray(f.properties.foto_urls) ? f.properties.foto_urls : (typeof f.properties.foto_urls === 'string' ? f.properties.foto_urls.split('|').filter(Boolean) : []);
+        const ids = Array.isArray(f.properties.foto_ids) ? f.properties.foto_ids : (typeof f.properties.foto_ids === 'string' ? f.properties.foto_ids.split('|').filter(Boolean) : []);
+        
+        const viewerUrls = urls.map((u, i) => `${baseUrl}?view_img=${encodeURIComponent(u)}&file_id=${ids[i]||''}`);
 
-        delete f.properties.fotos; delete f.properties.foto_ids; // Neteja
+        delete f.properties.fotos;
         f.properties.foto_urls=urls.join('|'); 
+        f.properties.foto_ids=ids.join('|'); 
         f.properties.arxius_fotos=urls.join('|');
-        f.properties.enllac_visor = viewerUrls.length > 0 ? viewerUrls[0] : '';
+        f.properties.enllac_visor = viewerUrls.length > 0 ? viewerUrls[0] : ''; 
         f.properties.n_fotos=urls.length||f.properties.n_fotos||0;
     });
-    
     downloadFile(JSON.stringify(buildGeoJSONExport(feats),null,2),`inspeccions_${dateStr()}.geojson`,'application/geo+json');
     closeAllPanels(); showNotification("GeoJSON exportat!");
 }
 
-// Exportació "A prova de bales" descarregant un arxiu ZIP.
 async function exportDataAsZip() {
     if(!savedPoints.length){ showNotification("Sense punts.",true); return; }
     showNotification("⏳ Generant ZIP...",false,true);
@@ -944,19 +807,20 @@ async function exportDataAsZip() {
         const baseUrl = window.location.origin + window.location.pathname; 
 
         feats.forEach(f=>{
-            const urls=Array.isArray(f.properties.foto_urls)?f.properties.foto_urls:[];
-            const viewerUrls = urls.map(u => `${baseUrl}?view_img=${encodeURIComponent(u)}`);
+            const urls = Array.isArray(f.properties.foto_urls) ? f.properties.foto_urls : (typeof f.properties.foto_urls === 'string' ? f.properties.foto_urls.split('|').filter(Boolean) : []);
+            const ids = Array.isArray(f.properties.foto_ids) ? f.properties.foto_ids : (typeof f.properties.foto_ids === 'string' ? f.properties.foto_ids.split('|').filter(Boolean) : []);
+            
+            const viewerUrls = urls.map((u, i) => `${baseUrl}?view_img=${encodeURIComponent(u)}&file_id=${ids[i]||''}`);
 
-            delete f.properties.fotos; delete f.properties.foto_ids;
+            delete f.properties.fotos;
             f.properties.foto_urls=urls.join('|'); 
+            f.properties.foto_ids=ids.join('|');
             f.properties.arxius_fotos=urls.join('|');
-            f.properties.enllac_visor = viewerUrls.length > 0 ? viewerUrls[0] : '';
+            f.properties.enllac_visor = viewerUrls.length > 0 ? viewerUrls[0] : ''; 
             if(typeof f.properties.n_fotos==='undefined') f.properties.n_fotos=urls.length;
         });
-        
         zip.file("mapa_inspeccions.geojson", JSON.stringify(buildGeoJSONExport(feats),null,2));
-        zip.file("LLEGIR.txt","QGIS: Importa mapa_inspeccions.geojson\nFes clic al camp 'enllac_visor' per obrir la foto directament al navegador (Visor Web).\nCRS: WGS84 (EPSG:4326)\nCoordenades UTM als camps utm_x, utm_y (EPSG:25831)");
-        
+        zip.file("LLEGIR.txt","QGIS: Importa mapa_inspeccions.geojson\nFes clic al camp 'enllac_visor' per obrir la foto directament al navegador (Visor Web).\nCRS: WGS84 (EPSG:4326)\n");
         const content=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
         downloadBlob(content,`inspeccions_camp_${dateStr()}.zip`);
         closeAllPanels(); showNotification("✅ ZIP descarregat!");
@@ -968,8 +832,6 @@ function buildGeoJSONExport(features) {
 }
 
 function dateStr(){ return new Date().toISOString().slice(0,10).replace(/-/g,''); }
-
-// Funcions d'ajuda per demanar al navegador que ens forci una descàrrega cap a l'ordinador/mòbil
 function downloadFile(content,filename,mime){ downloadBlob(new Blob([content],{type:mime}),filename); }
 function downloadBlob(blob,filename){
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
@@ -977,11 +839,7 @@ function downloadBlob(blob,filename){
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
 
-
-// ==============================================================================
-// EXPOSICIÓ GLOBAL PER L'HTML
-// Necessari a Vercel/Modules per assegurar que els atributs "onclick=" funcionen
-// ==============================================================================
+// ─── Exposar funcions globalment pels botons HTML ───
 window.updateCustomStartNum = updateCustomStartNum;
 window.openToolsPanel = openToolsPanel;
 window.closeAllPanels = closeAllPanels;
@@ -999,44 +857,29 @@ window.exportGeoJSONonly = exportGeoJSONonly;
 window.importGeoJSON = importGeoJSON;
 window.clearData = clearData;
 
-
-// ==============================================================================
-// 8. ARRENCADA DE L'APLICACIÓ (PUNT D'ENTRADA)
-// Lògica de decisió inicial en carregar la pàgina.
-// ==============================================================================
 window.onload = () => {
-    
-    // Detectem si l'URL porta els paràmetres especials "?view_img=..." (Mode Visor de QGIS)
+    // ─── VISOR D'IMATGES EXCLUSIU (Integrat) ───
     const urlParams = new URLSearchParams(window.location.search);
     const viewImg = urlParams.get('view_img');
+    const fileId = urlParams.get('file_id') || '';
     
     if (viewImg) {
-        /*
-         * MODE VISOR FOTOGRÀFIC
-         * Si algú clica a QGIS, obrirà la teva pròpia App però destruirà tot
-         * l'HTML original de dalt per construir un visor de fotografia pur.
-         * Així s'evita la descàrrega forçada de Telegram.
-         */
         document.title = "Visor de Fotografia";
         document.body.innerHTML = `
             <div style="background-color: #111827; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; padding: 20px; box-sizing: border-box; font-family: sans-serif;">
-                <img src="${viewImg}" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.8);">
+                <!-- Aquí apliquem la funció onerror perquè carregui de nou la foto si està caducada -->
+                <img src="${viewImg}" onerror="refreshTelegramImage(this, '${fileId}')" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.8);">
                 <div style="margin-top: 24px; display: flex; gap: 16px;">
-                    <a href="${window.location.pathname}" style="padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Tornar al Mapa</a>
-                    <a href="${viewImg}" target="_blank" download style="padding: 12px 24px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; border: 1px solid #4b5563;">Forçar Descàrrega</a>
+                    <a href="${window.location.pathname}" style="padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Tornar a l'App</a>
+                    <a href="${viewImg}" id="viewer-download-btn" target="_blank" download style="padding: 12px 24px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; border: 1px solid #4b5563;">Obrir Directe</a>
                 </div>
             </div>
         `;
-        return; // Parem l'execució aquí. La resta de l'app de mapes no es carregarà.
+        return; 
     }
 
-    // MODE APP NORMAL (Si l'obres des del mòbil per agafar dades)
-    initMap(); // Encenem el Mapa
-    
-    // Demanem credencials de Telegram si l'usuari no les ha configurat mai
-    if (!TG_TOKEN || !TG_CHAT_ID) {
-        setTimeout(()=>openTelegramModal(), 600);
-    }
+    initMap();
+    if (!TG_TOKEN || !TG_CHAT_ID) setTimeout(()=>openTelegramModal(), 600);
 };
 </script>
 </body>
