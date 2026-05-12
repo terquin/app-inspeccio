@@ -3,666 +3,884 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Control Domòtic</title>
-    <meta name="theme-color" content="#0a0f1e">
+    <title>Inspecció de Camp</title>
+
+    <!-- ═══ PWA: fa desaparèixer la barra del navegador ═══════════ -->
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiSW5zcGVjY2nDsyBkZSBDYW1wIiwic2hvcnRfbmFtZSI6Ikluc3BlY2Npw7MiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YzZjRmNiIsInRoZW1lX2NvbG9yIjoiIzI1NjNlYiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL3VwbG9hZC53aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iL2UvZWQvTWFwX3Bpbl9pY29uLnN2Zy8xOTJweC1NYXBfcGluX2ljb24uc3ZnLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imh0dHBzOi8vdXBsb2FkLndpa2ltZWRpYS5vcmcvd2lraXBlZGlhL2NvbW1vbnMvdGh1bWIvZS9lZC9NYXBfcGluX2ljb24uc3ZnLzUxMnB4LU1hcF9waW5faWNvbi5zdmcucG5nIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJ9XX0=">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Domòtica">
-    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Dom%C3%B2tica%22%2C%22short_name%22%3A%22Dom%C3%B2tica%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%220a0f1e%22%2C%22theme_color%22%3A%220a0f1e%22%7D">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-main:#0a0f1e; --bg-panel:#0d1528; --bg-card:#111c35; --bg-elevated:#172040;
-            --accent-cyan:#00d4ff; --accent-blue:#0077ff; --accent-green:#00e676;
-            --accent-red:#ff3d71; --accent-amber:#ffab00; --accent-purple:#7c4dff;
-            --text-primary:#e8f4fd; --text-secondary:#8ab0d0; --text-muted:#4a6a8a;
-            --border-subtle:rgba(0,212,255,0.1); --border-glow:rgba(0,212,255,0.3);
-            --glow-cyan:0 0 20px rgba(0,212,255,0.4); --glow-green:0 0 20px rgba(0,230,118,0.4); --glow-red:0 0 20px rgba(255,61,113,0.4);
+    <meta name="apple-mobile-web-app-title" content="Inspecció">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/512px-Map_pin_icon.svg.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/512px-Map_pin_icon.svg.png">
+
+    <!-- Motor Service Worker per enganyar a Chrome i que permeti l'App 100% Nativa -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', e => self.skipWaiting());
+                    self.addEventListener('activate', e => self.clients.claim());
+                    self.addEventListener('fetch', e => {});
+                `;
+                const blob = new Blob([swCode], {type: 'application/javascript'});
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(() => {});
+            });
         }
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{background:var(--bg-main);background-image:radial-gradient(ellipse at 20% 20%,rgba(0,119,255,0.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(0,212,255,0.04) 0%,transparent 50%);color:var(--text-primary);font-family:'Exo 2',sans-serif;min-height:100vh;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none}
-        input,textarea{-webkit-user-select:auto;user-select:auto}
+    </script>
 
-        /* HEADER */
-        header{background:rgba(10,15,30,0.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-subtle);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
-        .logo{display:flex;align-items:center;gap:10px}
-        .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:var(--glow-cyan)}
-        .logo-text{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(90deg,var(--accent-cyan),var(--accent-blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-        .header-actions{display:flex;gap:8px;align-items:center}
-        .header-btn{background:var(--bg-card);border:1px solid var(--border-subtle);color:var(--text-secondary);width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:16px}
-        .header-btn:hover{border-color:var(--accent-cyan);color:var(--accent-cyan)}
-        .user-pill{display:flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:20px;padding:4px 12px 4px 8px;font-size:13px;color:var(--text-secondary);cursor:pointer}
-        .user-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent-green);box-shadow:0 0 6px var(--accent-green)}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
-        /* NAV */
-        .nav-tabs{display:flex;background:var(--bg-panel);border-bottom:1px solid var(--border-subtle);overflow-x:auto;scrollbar-width:none}
-        .nav-tabs::-webkit-scrollbar{display:none}
-        .nav-tab{flex:1;min-width:90px;padding:12px 14px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap}
-        .nav-tab.active{color:var(--accent-cyan);border-bottom-color:var(--accent-cyan);background:rgba(0,212,255,0.04)}
-
-        /* MAIN */
-        main{flex:1;padding:16px;max-width:900px;width:100%;margin:0 auto}
-        .view{display:none}.view.active{display:block}
-
-        /* CONTROL BUTTONS */
-        .group-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:16px;margin-bottom:16px}
-        .group-card:hover{border-color:var(--border-glow)}
-        .group-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-        .group-indicator{width:4px;height:24px;background:linear-gradient(180deg,var(--accent-cyan),var(--accent-blue));border-radius:2px;box-shadow:0 0 8px rgba(0,212,255,0.5)}
-        .group-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-        .btn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
-        .ctrl-btn{background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-primary);border-radius:12px;padding:14px 8px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:72px;font-family:'Exo 2',sans-serif}
-        .ctrl-btn:active{transform:scale(0.94)}
-        .ctrl-btn .btn-label{font-size:14px;font-weight:600;text-align:center}
-        .ctrl-btn .btn-cmd{font-size:10px;color:var(--text-muted);font-family:'Rajdhani',sans-serif}
-        .ctrl-btn.btn-on{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.3)}
-        .ctrl-btn.btn-on:hover{background:rgba(0,230,118,0.15);border-color:var(--accent-green);box-shadow:var(--glow-green);color:var(--accent-green)}
-        .ctrl-btn.btn-off{background:rgba(255,61,113,0.08);border-color:rgba(255,61,113,0.3)}
-        .ctrl-btn.btn-off:hover{background:rgba(255,61,113,0.15);border-color:var(--accent-red);box-shadow:var(--glow-red);color:var(--accent-red)}
-        .ctrl-btn.btn-neutral:hover{background:rgba(0,119,255,0.15);border-color:var(--accent-blue);color:var(--accent-cyan)}
-        .ctrl-btn.sending{background:rgba(255,171,0,0.1);border-color:var(--accent-amber);color:var(--accent-amber);cursor:not-allowed}
-
-        /* SETTINGS */
-        .settings-section{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;margin-bottom:16px}
-        .section-title{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:8px}
-        .form-group{margin-bottom:14px}
-        .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
-        .form-input{width:100%;background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-primary);border-radius:10px;padding:10px 14px;font-family:'Exo 2',sans-serif;font-size:14px;transition:border-color 0.2s;outline:none}
-        .form-input:focus{border-color:var(--accent-cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.1)}
-        .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-
-        /* BUTTONS */
-        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s;width:100%}
-        .btn:disabled{opacity:0.5;cursor:not-allowed}
-        .btn-primary{background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));color:#fff;box-shadow:0 4px 15px rgba(0,119,255,0.3)}
-        .btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,119,255,0.5)}
-        .btn-success{background:linear-gradient(135deg,#00b248,var(--accent-green));color:#fff}
-        .btn-danger{background:linear-gradient(135deg,#cc0033,var(--accent-red));color:#fff}
-        .btn-ghost{background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-secondary)}
-        .btn-ghost:hover{border-color:var(--accent-cyan);color:var(--accent-cyan)}
-        .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-
-        /* BUTTON LIST */
-        .btn-list-item{background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
-        .btn-list-item:hover{border-color:var(--border-glow)}
-        .btn-list-info{flex:1;min-width:0}
-        .btn-list-group{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:2px}
-        .btn-list-label{font-size:15px;font-weight:600}
-        .btn-list-cmd{font-size:12px;color:var(--text-muted);font-family:'Rajdhani',sans-serif;margin-top:2px}
-        .btn-list-actions{display:flex;gap:6px;flex-shrink:0}
-        .icon-btn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border-subtle);background:var(--bg-card);font-size:13px;transition:all 0.2s}
-        .icon-btn-edit{color:var(--accent-cyan)}.icon-btn-edit:hover{background:rgba(0,212,255,0.1);border-color:var(--accent-cyan)}
-        .icon-btn-delete{color:var(--accent-red)}.icon-btn-delete:hover{background:rgba(255,61,113,0.1);border-color:var(--accent-red)}
-        .badge{display:inline-block;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);color:var(--accent-cyan);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;font-family:'Rajdhani',sans-serif}
-        .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
-        .empty-state i{font-size:40px;margin-bottom:12px;display:block}
-
-        /* MODAL */
-        .modal-overlay{position:fixed;inset:0;background:rgba(6,11,24,0.85);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.2s}
-        .modal-overlay.open{opacity:1;pointer-events:auto}
-        .modal{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:20px;padding:24px;width:100%;max-width:450px;box-shadow:0 20px 60px rgba(0,0,0,0.5),var(--glow-cyan);transform:translateY(20px);transition:transform 0.2s}
-        .modal-overlay.open .modal{transform:translateY(0)}
-        .modal-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:20px;display:flex;align-items:center;gap:10px}
-
-        /* LOGIN */
-        #loginScreen{position:fixed;inset:0;background:var(--bg-main);background-image:radial-gradient(ellipse at 30% 30%,rgba(0,119,255,0.08) 0%,transparent 60%);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
-        .login-box{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:24px;padding:32px 28px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,0.6),var(--glow-cyan)}
-        .login-logo{text-align:center;margin-bottom:28px}
-        .login-logo-icon{width:64px;height:64px;margin:0 auto 12px;background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:var(--glow-cyan)}
-        .login-title{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(90deg,var(--accent-cyan),var(--accent-blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-        .login-subtitle{font-size:13px;color:var(--text-muted);margin-top:4px}
-        .login-step{display:none}.login-step.active{display:block}
-        .step-label{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px}
-        .info-note{background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px}
-        .info-note a{color:var(--accent-cyan);text-decoration:none}
-
-        /* BACKUP */
-        .backup-card{background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
-        .backup-icon{width:44px;height:44px;border-radius:12px;border:1px solid;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-        .backup-text{flex:1}
-        .backup-title{font-size:14px;font-weight:700;margin-bottom:2px}
-        .backup-desc{font-size:12px;color:var(--text-muted)}
-
-        /* TOAST */
-        #toastContainer{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:600;display:flex;flex-direction:column;align-items:center;gap:8px;width:90%;max-width:380px;pointer-events:none}
-        .toast{background:var(--bg-card);border-radius:12px;padding:12px 18px;font-size:14px;font-weight:500;width:100%;text-align:center;animation:toastIn 0.3s ease-out;pointer-events:auto}
-        .toast-success{border:1px solid rgba(0,230,118,0.4);color:var(--accent-green);box-shadow:var(--glow-green)}
-        .toast-error{border:1px solid rgba(255,61,113,0.4);color:var(--accent-red)}
-        .toast-info{border:1px solid rgba(0,212,255,0.3);color:var(--accent-cyan)}
-        @keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg-main)}::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:2px}
-        #importFileInput{display:none}
+    <style>
+        body, html { margin:0; padding:0; height:100%; width:100%; overflow:hidden; background:#f3f4f6; }
+        #map { height:100vh; width:100%; z-index:1; }
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
+        #notification-area {
+            position:fixed; top:20px; left:50%; transform:translateX(-50%);
+            z-index:9999; width:90%; max-width:400px;
+        }
+        .notification {
+            background:#10b981; color:white; padding:12px; border-radius:8px;
+            margin-bottom:10px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,.1);
+            transition:opacity .5s ease;
+        }
+        .notification.error { background:#ef4444; }
+        .notification.info  { background:#3b82f6; }
+        .popup-content { font-size:13px; min-width:200px; max-width:280px; }
+        .popup-content b { color:#374151; }
+        .popup-content .popup-id {
+            background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px;
+            padding:2px 6px; font-size:11px; color:#1d4ed8; font-family:monospace;
+            margin-bottom:6px; display:inline-block;
+        }
+        .popup-content .popup-row { border-bottom:1px solid #f3f4f6; padding:3px 0; }
+        .popup-content .popup-fotos-label { font-size:11px; color:#6b7280; margin-top:4px; }
     </style>
 </head>
-<body>
+<body class="relative">
 
-<!-- LOGIN SCREEN -->
-<div id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="login-logo-icon"><i class="fas fa-house-signal"></i></div>
-      <div class="login-title">Domòtica</div>
-      <div class="login-subtitle">Control via Telegram</div>
-    </div>
+<div id="notification-area"></div>
+<div id="map"></div>
 
-    <!-- PAS 1 -->
-    <div class="login-step active" id="step1">
-      <div class="step-label">Pas 1 de 3 — Credencials</div>
-      <div class="info-note">
-        Obtén <strong>API ID</strong> i <strong>API Hash</strong> a
-        <a href="https://my.telegram.org" target="_blank">my.telegram.org</a> → API Development.
-        Es guarden <strong>només al teu dispositiu</strong>.
-      </div>
-      <div class="form-group"><label class="form-label">API ID</label>
-        <input type="number" id="loginApiId" class="form-input" placeholder="Ex: 24353775">
-      </div>
-      <div class="form-group"><label class="form-label">API Hash</label>
-        <input type="text" id="loginApiHash" class="form-input" placeholder="Ex: e4b66269e9857030...">
-      </div>
-      <div class="form-group"><label class="form-label">Número de telèfon</label>
-        <input type="tel" id="loginPhone" class="form-input" placeholder="Ex: +34612345678">
-      </div>
-      <div class="form-group"><label class="form-label">Chat ID del grup domòtica</label>
-        <input type="text" id="loginChatId" class="form-input" placeholder="Ex: -1003082954760">
-      </div>
-      <button class="btn btn-primary" id="btnSendCode" style="margin-top:8px">
-        <i class="fas fa-paper-plane"></i> Enviar codi SMS
-      </button>
-    </div>
-
-    <!-- PAS 2 -->
-    <div class="login-step" id="step2">
-      <div class="step-label">Pas 2 de 3 — Verificació</div>
-      <div class="info-note">T'hem enviat un codi per Telegram. Introdueix-lo aquí.</div>
-      <div class="form-group"><label class="form-label">Codi de verificació</label>
-        <input type="number" id="loginCode" class="form-input" placeholder="Ex: 12345">
-      </div>
-      <div id="twoFAGroup" class="form-group" style="display:none">
-        <label class="form-label">Contrasenya 2FA</label>
-        <input type="password" id="login2FA" class="form-input" placeholder="Contrasenya de dos factors">
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-ghost" id="btnBackStep1"><i class="fas fa-arrow-left"></i> Tornar</button>
-        <button class="btn btn-success" id="btnVerifyCode"><i class="fas fa-check"></i> Verificar</button>
-      </div>
-    </div>
-
-    <!-- PAS 3 -->
-    <div class="login-step" id="step3">
-      <div style="text-align:center;padding:10px 0 20px">
-        <i class="fas fa-circle-check" style="font-size:48px;color:var(--accent-green);display:block;margin-bottom:12px;filter:drop-shadow(0 0 12px var(--accent-green))"></i>
-        <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent-green);margin-bottom:6px">Connectat!</div>
-        <div id="loginSuccessMsg" style="font-size:14px;color:var(--text-secondary)"></div>
-      </div>
-      <button class="btn btn-primary" id="btnEnterApp"><i class="fas fa-arrow-right"></i> Entrar a l'app</button>
-    </div>
-  </div>
+<!-- Botons flotants -->
+<div class="fixed bottom-8 right-4 flex flex-col gap-4 z-[400]">
+    <button onclick="openToolsPanel()" title="Gestió de dades"
+        class="bg-white p-3 rounded-full shadow-lg text-gray-700 hover:bg-gray-100 flex justify-center items-center">
+        <i data-lucide="settings"></i>
+    </button>
+    <button onclick="locateUser()" title="Localitzar-me"
+        class="bg-white p-3 rounded-full shadow-lg text-blue-600 hover:bg-gray-100 flex justify-center items-center">
+        <i data-lucide="crosshair"></i>
+    </button>
+    <button onclick="openNewPointForm()" title="Nou punt"
+        class="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 flex justify-center items-center transition transform active:scale-95">
+        <i data-lucide="plus" class="w-8 h-8"></i>
+    </button>
 </div>
 
-<!-- APP -->
-<header>
-  <div class="logo">
-    <div class="logo-icon"><i class="fas fa-house-signal"></i></div>
-    <span class="logo-text">Domòtica</span>
-  </div>
-  <div class="header-actions">
-    <div class="user-pill" id="userPill">
-      <span class="dot"></span>
-      <span id="userPillName">—</span>
-    </div>
-    <div class="header-btn" id="btnSettingsHeader"><i class="fas fa-sliders"></i></div>
-  </div>
-</header>
+<div id="backdrop" class="fixed inset-0 bg-black/40 z-[500] hidden" onclick="closeAllPanels()"></div>
 
-<div class="nav-tabs">
-  <div class="nav-tab active" data-view="control"><i class="fas fa-toggle-on" style="margin-right:5px"></i>Control</div>
-  <div class="nav-tab" data-view="buttons"><i class="fas fa-table-cells" style="margin-right:5px"></i>Botons</div>
-  <div class="nav-tab" data-view="settings"><i class="fas fa-gear" style="margin-right:5px"></i>Ajustos</div>
-  <div class="nav-tab" data-view="backup"><i class="fas fa-cloud-arrow-down" style="margin-right:5px"></i>Còpia</div>
+<!-- PANELL 1: Nou/Editar Punt -->
+<div id="form-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[92vh] flex flex-col">
+    <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i data-lucide="map-pin" class="text-red-500"></i> <span id="form-title-text">Nou Punt</span>
+        </h1>
+        <div class="flex items-center gap-2">
+            <span id="new-point-id" class="text-xs bg-blue-50 text-blue-600 font-mono px-2 py-1 rounded-full border border-blue-200"></span>
+            <button onclick="closeAllPanels()" class="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
+    <div class="p-5 overflow-y-auto flex flex-col gap-4">
+        <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-700" id="form-info-gps">
+            <i data-lucide="info" class="inline w-4 h-4"></i> Si no tens GPS, tanca i toca el mapa per situar-te.
+        </div>
+        <div class="bg-purple-50 p-3 rounded-lg text-xs text-purple-700 flex items-center gap-2">
+            <span class="text-base">✈️</span>
+            <span>Les fotos es pujaran a <strong>Telegram</strong>. Necessites connexió.</span>
+        </div>
+        <div class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 font-mono flex justify-between items-center">
+            <div><strong>X:</strong> <span id="lat-display">Buscant...</span></div>
+            <div><strong>Y:</strong> <span id="lon-display">Buscant...</span></div>
+            <button onclick="locateUser()" class="text-blue-500 p-1"><i data-lucide="locate" class="w-4 h-4"></i></button>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">Codi / Referència <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
+            <input type="text" id="codi" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: SEC-01, ARBRE-23...">
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">Tipus</label>
+            <select id="tipus" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                <option value="">-- Selecciona --</option>
+                <option value="incidencia">Incidència</option>
+                <option value="element">Element inventariat</option>
+                <option value="mostra">Mostra</option>
+                <option value="observacio">Observació</option>
+                <option value="altres">Altres</option>
+            </select>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">Estat</label>
+            <div class="flex gap-2">
+                <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-green-50" id="estat-bo-label">
+                    <input type="radio" name="estat" value="bo" class="hidden" onchange="updateEstat(this)">
+                    <span>✅</span><span class="text-sm font-medium text-gray-700">Bo</span>
+                </label>
+                <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-yellow-50" id="estat-regular-label">
+                    <input type="radio" name="estat" value="regular" class="hidden" onchange="updateEstat(this)">
+                    <span>⚠️</span><span class="text-sm font-medium text-gray-700">Regular</span>
+                </label>
+                <label class="flex-1 flex items-center justify-center gap-1 p-2 rounded-lg border cursor-pointer hover:bg-red-50" id="estat-dolent-label">
+                    <input type="radio" name="estat" value="dolent" class="hidden" onchange="updateEstat(this)">
+                    <span>❌</span><span class="text-sm font-medium text-gray-700">Dolent</span>
+                </label>
+            </div>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
+            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">Fotografies <span class="text-gray-400 font-normal text-xs" id="edit-photo-info"></span></label>
+            <label class="border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold p-4 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-100">
+                <i data-lucide="camera"></i>
+                <span id="photo-label">Fer fotos o seleccionar-ne</span>
+                <input type="file" id="photoInput" accept="image/*" capture="environment" multiple class="hidden" onchange="handlePhoto(event)">
+            </label>
+            <div id="photo-preview-container" class="hidden mt-2 grid grid-cols-2 gap-2"></div>
+        </div>
+        <button onclick="savePoint()" class="w-full bg-blue-600 text-white py-4 mt-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md">
+            <i data-lucide="save"></i> <span id="btn-save-text">Guardar Punt al Mapa</span>
+        </button>
+    </div>
 </div>
 
-<main>
-  <!-- CONTROL -->
-  <div class="view active" id="view-control"><div id="controlsContainer"></div></div>
+<!-- PANELL 2: Gestió de Dades -->
+<div id="tools-panel" class="fixed inset-x-0 bottom-0 z-[600] bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[85vh] flex flex-col">
+    <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i data-lucide="database" class="text-gray-500"></i> Gestió de Dades
+        </h1>
+        <button onclick="closeAllPanels()" class="text-gray-500 hover:bg-gray-100 p-2 rounded-full"><i data-lucide="x"></i></button>
+    </div>
+    <div class="p-5 overflow-y-auto flex flex-col gap-3">
+        <div class="text-center font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
+        </div>
 
-  <!-- BUTTONS -->
-  <div class="view" id="view-buttons">
-    <div class="settings-section">
-      <div class="section-title"><i class="fas fa-plus-circle"></i> Nou Botó</div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Grup</label><input type="text" id="inputBtnGroup" class="form-input" placeholder="Ex: Llum Menjador"></div>
-        <div class="form-group"><label class="form-label">Text</label><input type="text" id="inputBtnLabel" class="form-input" placeholder="Ex: Encendre"></div>
-        <div class="form-group"><label class="form-label">Comanda</label><input type="text" id="inputBtnCommand" class="form-input" placeholder="Ex: /llum_on"></div>
-      </div>
-      <button class="btn btn-success" id="btnAddButton" style="margin-top:4px"><i class="fas fa-plus"></i> Crear Botó</button>
-    </div>
-    <div class="settings-section">
-      <div class="section-title" style="justify-content:space-between">
-        <span><i class="fas fa-list-ul"></i> Botons Actuals</span>
-        <span class="badge" id="btnCount">0</span>
-      </div>
-      <div id="settingsButtonsList"></div>
-    </div>
-  </div>
+        <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+            <label for="custom-start-num" class="text-sm font-semibold text-gray-700">Començar numeració pel punt:</label>
+            <div class="flex items-center gap-1">
+                <span class="text-gray-500 font-mono">#</span>
+                <input type="number" id="custom-start-num" min="1" onchange="updateCustomStartNum(this.value)" class="w-16 border border-gray-300 rounded-md p-1.5 text-center font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+        </div>
 
-  <!-- SETTINGS -->
-  <div class="view" id="view-settings">
-    <div class="settings-section">
-      <div class="section-title"><i class="fas fa-gear"></i> Configuració</div>
-      <div class="form-group">
-        <label class="form-label">Chat ID del grup de domòtica</label>
-        <input type="text" id="settingsChatId" class="form-input" placeholder="Ex: -1003082954760">
-      </div>
-      <button class="btn btn-primary" id="btnSaveSettings"><i class="fas fa-save"></i> Guardar</button>
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-subtle)">
-        <button class="btn btn-danger" id="btnLogout"><i class="fas fa-right-from-bracket"></i> Tancar sessió</button>
-      </div>
+        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 border border-blue-200 mt-2">
+            <i data-lucide="send" class="w-5 h-5"></i> Configurar Bot de Telegram
+        </button>
+        <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
+            <strong>📐 QGIS:</strong> A la taula d'atributs, fes clic al camp <code>enllac_visor</code> per obrir la foto de forma integrada al navegador, evitant problemes de caducitat.
+        </div>
+        <div class="h-px bg-gray-100"></div>
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Exportar</p>
+        <button onclick="exportDataAsZip()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-green-700 shadow-sm">
+            <i data-lucide="folder-down"></i> Exportar ZIP (GeoJSON)
+        </button>
+        <button onclick="exportGeoJSONonly()" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-700 shadow-sm">
+            <i data-lucide="file-down"></i> Exportar GeoJSON directe
+        </button>
+        <div class="h-px bg-gray-100"></div>
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Importar</p>
+        <label class="flex items-center justify-center gap-2 w-full bg-purple-50 text-purple-700 py-3 rounded-lg font-semibold cursor-pointer hover:bg-purple-100 border border-purple-200">
+            <i data-lucide="upload" class="w-5 h-5"></i> Importar GeoJSON
+            <input type="file" accept=".geojson,.json" class="hidden" onchange="importGeoJSON(event)">
+        </label>
+        <div class="h-px bg-gray-100"></div>
+        <button onclick="clearData()" class="w-full bg-red-50 text-red-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 border border-red-200">
+            <i data-lucide="trash-2"></i> Esborrar totes les dades
+        </button>
     </div>
-  </div>
-
-  <!-- BACKUP -->
-  <div class="view" id="view-backup">
-    <div class="settings-section">
-      <div class="section-title"><i class="fas fa-cloud-arrow-down"></i> Còpia de Seguretat</div>
-      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">Les credencials de Telegram <strong>no s'inclouen</strong> per seguretat. Només els botons.</p>
-      <div class="backup-card">
-        <div class="backup-icon" style="background:rgba(0,119,255,0.15);border-color:rgba(0,119,255,0.3);color:var(--accent-blue)"><i class="fas fa-file-export"></i></div>
-        <div class="backup-text"><div class="backup-title">Exportar Botons</div><div class="backup-desc">Descarrega un fitxer JSON</div></div>
-        <button class="btn btn-primary" style="width:auto;padding:8px 16px" id="btnExport"><i class="fas fa-download"></i></button>
-      </div>
-      <div class="backup-card">
-        <div class="backup-icon" style="background:rgba(124,77,255,0.15);border-color:rgba(124,77,255,0.3);color:var(--accent-purple)"><i class="fas fa-file-import"></i></div>
-        <div class="backup-text"><div class="backup-title">Importar Botons</div><div class="backup-desc">Carrega un fitxer JSON</div></div>
-        <button class="btn btn-ghost" style="width:auto;padding:8px 16px;border-color:rgba(124,77,255,0.3);color:var(--accent-purple)" id="btnImport"><i class="fas fa-upload"></i></button>
-      </div>
-      <input type="file" id="importFileInput" accept=".json">
-      <div style="margin-top:14px">
-        <button class="btn btn-danger" id="btnReset"><i class="fas fa-rotate-left"></i> Restablir Botons per Defecte</button>
-      </div>
-    </div>
-  </div>
-</main>
-
-<!-- MODAL EDIT -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <div class="modal-title"><i class="fas fa-pen-to-square"></i> Editar Botó</div>
-    <input type="hidden" id="editBtnId">
-    <div class="form-group"><label class="form-label">Grup</label><input type="text" id="editBtnGroup" class="form-input"></div>
-    <div class="form-group"><label class="form-label">Text</label><input type="text" id="editBtnLabel" class="form-input"></div>
-    <div class="form-group"><label class="form-label">Comanda</label><input type="text" id="editBtnCommand" class="form-input"></div>
-    <div class="btn-row">
-      <button class="btn btn-ghost" id="btnEditCancel"><i class="fas fa-times"></i> Cancel·lar</button>
-      <button class="btn btn-success" id="btnEditSave"><i class="fas fa-check"></i> Guardar</button>
-    </div>
-  </div>
 </div>
 
-<div id="toastContainer"></div>
+<!-- MODAL: Configuració Telegram -->
+<div id="telegram-modal" class="fixed inset-0 z-[700] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTelegramModalIfConfigured()"></div>
+    <div class="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-md overflow-hidden">
+        <div class="p-5 bg-blue-600 text-white flex items-center gap-2">
+            <i data-lucide="send"></i>
+            <h2 class="text-lg font-bold">Connexió a Telegram</h2>
+        </div>
+        <div class="p-5 flex flex-col gap-4">
+            <p class="text-sm text-gray-600">
+                Les dades es guarden <strong>només al teu dispositiu</strong> i mai surten al codi font de l'app.
+            </p>
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Token del Bot</label>
+                <input type="text" id="tg-token-input" autocomplete="off"
+                    class="border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Ex: 123456789:ABCdef...">
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="font-semibold text-gray-700 text-sm">Chat ID del grup</label>
+                <input type="text" id="tg-chatid-input" autocomplete="off"
+                    class="border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Ex: -100123456789">
+            </div>
+            <button onclick="saveTelegramConfig()"
+                class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-blue-700 shadow-md">
+                <i data-lucide="save" class="w-5 h-5"></i> Guardar al dispositiu
+            </button>
+            <button id="btn-cancel-tg" onclick="closeTelegramModalIfConfigured()"
+                class="w-full bg-gray-100 text-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-200">
+                Tancar
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
-// ═══════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════
-// Deixa buit = el mateix domini (Vercel).
-// Mentre desenvolupes en local posa: "http://localhost:3000"
-const API_BASE = "";
+lucide.createIcons();
 
-const DEFAULT_BUTTONS = [
-    {id:1,group:'Endoll 1',label:'Encendre',command:'/e1'},
-    {id:2,group:'Endoll 1',label:'Apagar',command:'/e1off'},
-    {id:3,group:'Endoll 2',label:'Encendre',command:'/end2'},
-    {id:4,group:'Endoll 2',label:'Apagar',command:'/end2off'},
-    {id:5,group:'Persiana',label:'Pujar',command:'/pujar_persiana'},
-    {id:6,group:'Persiana',label:'Baixar',command:'/baixar_persiana'},
-    {id:7,group:'Persiana',label:'Parar',command:'/parar_persiana'},
-    {id:8,group:'Llum Menjador',label:'Encendre',command:'/llum_menjador_on'},
-    {id:9,group:'Llum Menjador',label:'Apagar',command:'/llum_menjador_off'},
-    {id:10,group:'Rentaplats',label:'Encendre',command:'/rentaplats_on'},
-    {id:11,group:'Rentaplats',label:'Apagar',command:'/rentaplats_off'},
-];
+// ─── Variables globals ─────────────────────────────────────────
+let map, userMarker, currentLat = null, currentLon = null;
+let currentPhotosFiles = [];
+let previewUrls = [];
+let savedPoints = [];
+let editingPointId = null;
 
-// ═══════════════════════════════════════════════
-// STORAGE — tot al localStorage del dispositiu
-// ═══════════════════════════════════════════════
-const Store = {
-    _g: (k,d=null) => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch { return d; } },
-    _s: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
-    _d: (k) => localStorage.removeItem(k),
+// ─── Telegram: dades al dispositiu, mai al codi ────────────────
+let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
+let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 
-    getSession:  () => Store._g('tg_session', null),
-    getApiId:    () => Store._g('tg_api_id', null),
-    getApiHash:  () => Store._g('tg_api_hash', null),
-    getChatId:   () => Store._g('tg_chat_id', null),
-    getUserName: () => Store._g('tg_user_name', null),
-    getButtons:  () => Store._g('tg_buttons', DEFAULT_BUTTONS),
-
-    saveAuth(apiId, apiHash, session, chatId, userName) {
-        Store._s('tg_api_id',   apiId);
-        Store._s('tg_api_hash', apiHash);
-        Store._s('tg_session',  session);
-        Store._s('tg_chat_id',  chatId);
-        Store._s('tg_user_name',userName);
-    },
-    saveButtons: (b) => Store._s('tg_buttons', b),
-    logout() { ['tg_session','tg_api_id','tg_api_hash','tg_chat_id','tg_user_name'].forEach(k=>Store._d(k)); },
-};
-
-// ═══════════════════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════════════════
-let loginState = {};
-
-const Login = {
-    showStep(n) {
-        document.querySelectorAll('.login-step').forEach(s=>s.classList.remove('active'));
-        document.getElementById(`step${n}`).classList.add('active');
-    },
-
-    async sendCode() {
-        const apiId   = document.getElementById('loginApiId').value.trim();
-        const apiHash = document.getElementById('loginApiHash').value.trim();
-        const phone   = document.getElementById('loginPhone').value.trim();
-        const chatId  = document.getElementById('loginChatId').value.trim();
-
-        if (!apiId||!apiHash||!phone||!chatId) { showToast('⚠️ Omple tots els camps','error'); return; }
-
-        setBtnLoading('btnSendCode', true, 'Enviant...');
-        try {
-            const res = await fetch(`${API_BASE}/api/send_code`, {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({api_id:parseInt(apiId), api_hash:apiHash, phone})
-            });
-            const data = await res.json();
-            if (data.ok) {
-                loginState = {apiId:parseInt(apiId), apiHash, phone, chatId,
-                              partialSession:data.partial_session, phoneCodeHash:data.phone_code_hash};
-                this.showStep(2);
-                showToast('📱 Codi enviat per Telegram!','success');
-            } else {
-                showToast(`❌ ${data.error}`,'error');
-            }
-        } catch(e) { showToast('❌ Error connectant amb el servidor','error'); }
-        setBtnLoading('btnSendCode', false, '<i class="fas fa-paper-plane"></i> Enviar codi SMS');
-    },
-
-    async verifyCode() {
-        const code     = document.getElementById('loginCode').value.trim();
-        const password = document.getElementById('login2FA').value.trim();
-        if (!code) { showToast('⚠️ Introdueix el codi','error'); return; }
-
-        setBtnLoading('btnVerifyCode', true, 'Verificant...');
-        try {
-            const res = await fetch(`${API_BASE}/api/verify_code`, {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({
-                    api_id:loginState.apiId, api_hash:loginState.apiHash,
-                    phone:loginState.phone, code,
-                    phone_code_hash:loginState.phoneCodeHash,
-                    partial_session:loginState.partialSession,
-                    password
-                })
-            });
-            const data = await res.json();
-
-            if (data.needs_2fa) {
-                document.getElementById('twoFAGroup').style.display='block';
-                showToast('🔐 Introdueix la contrasenya 2FA','info');
-                setBtnLoading('btnVerifyCode', false, '<i class="fas fa-check"></i> Verificar');
-                return;
-            }
-            if (data.ok) {
-                Store.saveAuth(loginState.apiId, loginState.apiHash, data.session_string,
-                               loginState.chatId, data.name||data.username);
-                document.getElementById('loginSuccessMsg').textContent = `Benvingut, ${data.name||data.username}!`;
-                this.showStep(3);
-            } else {
-                showToast(`❌ ${data.error}`,'error');
-            }
-        } catch(e) { showToast('❌ Error de connexió','error'); }
-        setBtnLoading('btnVerifyCode', false, '<i class="fas fa-check"></i> Verificar');
-    },
-
-    enterApp() {
-        document.getElementById('loginScreen').style.display = 'none';
-        App.init();
-    }
-};
-
-// ═══════════════════════════════════════════════
-// TELEGRAM SEND
-// ═══════════════════════════════════════════════
-async function sendCommand(command) {
-    return fetch(`${API_BASE}/api/send`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-            api_id:   Store.getApiId(),
-            api_hash: Store.getApiHash(),
-            session_string: Store.getSession(),
-            command,
-            chat_id: parseInt(Store.getChatId())
-        })
-    }).then(r=>r.json());
+function openTelegramModal() {
+    document.getElementById('tg-token-input').value  = TG_TOKEN;
+    document.getElementById('tg-chatid-input').value = TG_CHAT_ID;
+    const modal = document.getElementById('telegram-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('btn-cancel-tg').classList.toggle('hidden', !TG_TOKEN || !TG_CHAT_ID);
 }
 
-// ═══════════════════════════════════════════════
-// APP
-// ═══════════════════════════════════════════════
-const App = {
-    init() {
-        document.querySelectorAll('.nav-tab').forEach(t=>
-            t.addEventListener('click', ()=>this.showView(t.dataset.view)));
-        document.getElementById('btnSettingsHeader').addEventListener('click', ()=>this.showView('settings'));
-        document.getElementById('btnAddButton').addEventListener('click', ()=>this.handleAddButton());
-        document.getElementById('btnEditSave').addEventListener('click', ()=>this.handleEditSave());
-        document.getElementById('btnEditCancel').addEventListener('click', closeModal);
-        document.getElementById('editModal').addEventListener('click', e=>{ if(e.target.id==='editModal') closeModal(); });
-        document.getElementById('btnSaveSettings').addEventListener('click', ()=>this.handleSaveSettings());
-        document.getElementById('btnLogout').addEventListener('click', ()=>this.handleLogout());
-        document.getElementById('btnExport').addEventListener('click', ()=>this.handleExport());
-        document.getElementById('btnImport').addEventListener('click', ()=>document.getElementById('importFileInput').click());
-        document.getElementById('importFileInput').addEventListener('change', e=>this.handleImport(e));
-        document.getElementById('btnReset').addEventListener('click', ()=>this.handleReset());
+function closeTelegramModalIfConfigured() {
+    if (!TG_TOKEN || !TG_CHAT_ID) {
+        showNotification("Has de configurar el Bot de Telegram primer.", true);
+        return;
+    }
+    const modal = document.getElementById('telegram-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
 
-        const name = Store.getUserName();
-        if (name) document.getElementById('userPillName').textContent = name;
+function saveTelegramConfig() {
+    const t = document.getElementById('tg-token-input').value.trim();
+    const c = document.getElementById('tg-chatid-input').value.trim();
+    if (!t || !c) { showNotification("Omple els dos camps.", true); return; }
+    TG_TOKEN   = t;
+    TG_CHAT_ID = c;
+    localStorage.setItem('tg_token',   TG_TOKEN);
+    localStorage.setItem('tg_chat_id', TG_CHAT_ID);
+    showNotification("✅ Configuració guardada al dispositiu!");
+    document.getElementById('telegram-modal').classList.add('hidden');
+    document.getElementById('telegram-modal').classList.remove('flex');
+}
 
-        this.showView('control');
-    },
-
-    showView(name) {
-        document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-        document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-        document.getElementById(`view-${name}`).classList.add('active');
-        document.querySelector(`[data-view="${name}"]`).classList.add('active');
-        if (name==='control') this.renderControl();
-        if (name==='buttons') this.renderButtonsList();
-        if (name==='settings') this.renderSettings();
-    },
-
-    renderControl() {
-        const c = document.getElementById('controlsContainer');
-        c.innerHTML = '';
-        const buttons = Store.getButtons();
-        if (!buttons.length) { c.innerHTML=`<div class="empty-state"><i class="fas fa-ghost"></i><p>No hi ha botons.<br>Afegeix-ne a la pestanya Botons.</p></div>`; return; }
-        const grouped = buttons.reduce((acc,b)=>{ (acc[b.group]=acc[b.group]||[]).push(b); return acc; },{});
-        for (const [gName,btns] of Object.entries(grouped)) {
-            const card = document.createElement('div');
-            card.className='group-card';
-            card.innerHTML=`<div class="group-header"><div class="group-indicator"></div><span class="group-title">${esc(gName)}</span></div><div class="btn-grid"></div>`;
-            const grid=card.querySelector('.btn-grid');
-            btns.forEach(btn=>{
-                const b=document.createElement('button');
-                const l=btn.label.toLowerCase();
-                let cls='ctrl-btn btn-neutral';
-                if(l.includes('encend')||l.includes('pujar')||l.includes('obrir')) cls='ctrl-btn btn-on';
-                if(l.includes('apag')||l.includes('baixar')||l.includes('tancar')) cls='ctrl-btn btn-off';
-                b.className=cls;
-                b.innerHTML=`<span class="btn-label">${esc(btn.label)}</span><span class="btn-cmd">${esc(btn.command)}</span>`;
-                b.addEventListener('click',()=>this.handleSend(btn.command,b));
-                grid.appendChild(b);
-            });
-            c.appendChild(card);
+// ─── FUNCIÓ MÀGICA: Refrescar imatges caducades de Telegram ────
+window.refreshTelegramImage = async function(img, fileId) {
+    if (!fileId || img.dataset.retried) {
+        img.style.display = 'none'; // Si falla amaguem la imatge trencada
+        return;
+    }
+    img.dataset.retried = 'true'; // Evitem bucles infinits
+    
+    const token = localStorage.getItem('tg_token');
+    if (!token) {
+        console.warn("Falta el Token de Telegram per refrescar la imatge.");
+        return;
+    }
+    
+    try {
+        const resp = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+        const data = await resp.json();
+        if (data.ok) {
+            const freshUrl = `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+            img.src = freshUrl; // Canviem la imatge al vol
+            
+            // Si estem en mode visor, actualitzem també el botó de descàrrega
+            const downloadBtn = document.getElementById('viewer-download-btn');
+            if(downloadBtn) downloadBtn.href = freshUrl;
+        } else {
+            img.style.display = 'none';
         }
-    },
-
-    async handleSend(command, btnEl) {
-        const orig=btnEl.innerHTML, origCls=btnEl.className;
-        btnEl.className='ctrl-btn sending';
-        btnEl.innerHTML=`<i class="fas fa-spinner fa-spin"></i><span class="btn-cmd">Enviant...</span>`;
-        btnEl.disabled=true;
-        try {
-            const data = await sendCommand(command);
-            if (data.ok) {
-                showToast(`✅ ${command}`,'success');
-            } else if (data.error&&data.error.includes('Sessió no vàlida')) {
-                showToast('❌ Sessió caducada. Torna a fer login.','error');
-                this.handleLogout();
-            } else {
-                showToast(`⚠️ ${data.error}`,'error');
-            }
-        } catch { showToast('❌ Error de connexió','error'); }
-        setTimeout(()=>{ btnEl.className=origCls; btnEl.innerHTML=orig; btnEl.disabled=false; },400);
-    },
-
-    renderButtonsList() {
-        const btns=Store.getButtons();
-        document.getElementById('btnCount').textContent=btns.length;
-        const list=document.getElementById('settingsButtonsList');
-        list.innerHTML='';
-        if(!btns.length){list.innerHTML=`<div class="empty-state"><i class="fas fa-inbox"></i><p>Cap botó configurat</p></div>`;return;}
-        btns.forEach(btn=>{
-            const item=document.createElement('div');
-            item.className='btn-list-item';
-            item.innerHTML=`<div class="btn-list-info"><div class="btn-list-group">${esc(btn.group)}</div><div class="btn-list-label">${esc(btn.label)}</div><div class="btn-list-cmd">${esc(btn.command)}</div></div><div class="btn-list-actions"><div class="icon-btn icon-btn-edit"><i class="fas fa-pen"></i></div><div class="icon-btn icon-btn-delete"><i class="fas fa-trash"></i></div></div>`;
-            item.querySelector('.icon-btn-edit').addEventListener('click',()=>openEditModal(btn));
-            item.querySelector('.icon-btn-delete').addEventListener('click',()=>{
-                Store.saveButtons(Store.getButtons().filter(b=>b.id!==btn.id));
-                this.renderButtonsList();
-                showToast('Botó eliminat','info');
-            });
-            list.appendChild(item);
-        });
-    },
-
-    handleAddButton() {
-        const group=document.getElementById('inputBtnGroup').value.trim();
-        const label=document.getElementById('inputBtnLabel').value.trim();
-        const command=document.getElementById('inputBtnCommand').value.trim();
-        if(!group||!label||!command){showToast('⚠️ Omple tots els camps','error');return;}
-        const btns=Store.getButtons();
-        const id=btns.length?Math.max(...btns.map(b=>b.id))+1:1;
-        btns.push({id,group,label,command});
-        Store.saveButtons(btns);
-        document.getElementById('inputBtnLabel').value='';
-        document.getElementById('inputBtnCommand').value='';
-        this.renderButtonsList();
-        showToast('✅ Botó afegit!','success');
-    },
-
-    handleEditSave() {
-        const id=parseInt(document.getElementById('editBtnId').value);
-        const group=document.getElementById('editBtnGroup').value.trim();
-        const label=document.getElementById('editBtnLabel').value.trim();
-        const command=document.getElementById('editBtnCommand').value.trim();
-        if(!group||!label||!command){showToast('⚠️ Omple tots els camps','error');return;}
-        Store.saveButtons(Store.getButtons().map(b=>b.id===id?{...b,group,label,command}:b));
-        closeModal();
-        this.renderButtonsList();
-        showToast('✅ Botó actualitzat!','success');
-    },
-
-    renderSettings() { document.getElementById('settingsChatId').value=Store.getChatId()||''; },
-
-    handleSaveSettings() {
-        const chatId=document.getElementById('settingsChatId').value.trim();
-        if(chatId) Store._s('tg_chat_id', chatId);
-        showToast('✅ Guardat!','success');
-    },
-
-    handleLogout() {
-        if(!confirm('Tancar la sessió?')) return;
-        Store.logout();
-        location.reload();
-    },
-
-    handleExport() {
-        const data={version:1,exportedAt:new Date().toISOString(),buttons:Store.getButtons()};
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
-        a.download=`domotica-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        showToast('✅ Exportat!','success');
-    },
-
-    handleImport(e) {
-        const file=e.target.files[0]; if(!file) return;
-        const reader=new FileReader();
-        reader.onload=ev=>{
-            try {
-                const data=JSON.parse(ev.target.result);
-                if(!Array.isArray(data.buttons)) throw new Error('Format no vàlid');
-                Store.saveButtons(data.buttons);
-                this.renderButtonsList();
-                showToast(`✅ ${data.buttons.length} botons importats`,'success');
-            } catch(err){showToast(`❌ ${err.message}`,'error');}
-        };
-        reader.readAsText(file);
-        e.target.value='';
-    },
-
-    handleReset() {
-        if(!confirm('Restablir botons per defecte?')) return;
-        Store.saveButtons(DEFAULT_BUTTONS);
-        this.renderButtonsList();
-        showToast('✅ Botons restablerts','info');
-    },
+    } catch(e) {
+        console.error('Error refrescant imatge:', e);
+        img.style.display = 'none';
+    }
 };
 
-// ═══════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════
-function esc(s){const d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
-
-function showToast(msg,type='info'){
-    const c=document.getElementById('toastContainer');
-    const t=document.createElement('div');
-    t.className=`toast toast-${type}`;
-    t.textContent=msg;
-    c.appendChild(t);
-    setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400);},2800);
+// ─── Projecció EPSG:25831 ──────────────────────────────────────
+proj4.defs("EPSG:25831","+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+function wgs84ToUtm31(lon, lat) {
+    const [x,y] = proj4("EPSG:4326","EPSG:25831",[lon,lat]);
+    return { x: Math.round(x*100)/100, y: Math.round(y*100)/100 };
 }
 
-function setBtnLoading(id,loading,label){
-    const btn=document.getElementById(id);
-    btn.disabled=loading;
-    btn.innerHTML=loading?`<i class="fas fa-spinner fa-spin"></i> ${label}`:label;
-}
-
-function openEditModal(btn){
-    document.getElementById('editBtnId').value=btn.id;
-    document.getElementById('editBtnGroup').value=btn.group;
-    document.getElementById('editBtnLabel').value=btn.label;
-    document.getElementById('editBtnCommand').value=btn.command;
-    document.getElementById('editModal').classList.add('open');
-}
-function closeModal(){document.getElementById('editModal').classList.remove('open');}
-
-// ═══════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnSendCode').addEventListener('click',   ()=>Login.sendCode());
-    document.getElementById('btnVerifyCode').addEventListener('click', ()=>Login.verifyCode());
-    document.getElementById('btnBackStep1').addEventListener('click',  ()=>Login.showStep(1));
-    document.getElementById('btnEnterApp').addEventListener('click',   ()=>Login.enterApp());
-
-    if (Store.getSession()) {
-        document.getElementById('loginScreen').style.display='none';
-        App.init();
+// ─── Telegram upload ───────────────────────────────────────────
+async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
+    if (!TG_TOKEN || !TG_CHAT_ID) {
+        showNotification("Configura el Bot de Telegram primer.", true);
+        return null;
     }
-});
+    try {
+        const fd = new FormData();
+        fd.append('chat_id', TG_CHAT_ID);
+        fd.append('caption', `Punt #${numPunt} · Foto ${fotoIndex}`);
+        fd.append('photo', blob, `foto_punt${numPunt}_${fotoIndex}.jpg`);
+        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {method:'POST', body:fd});
+        const data = await resp.json();
+        if (!data.ok) { console.error('Telegram:', data); return null; }
+        const fileId   = data.result.photo[data.result.photo.length-1].file_id;
+        const fileResp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
+        const fileData = await fileResp.json();
+        return { fileId, fileUrl: `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}` };
+    } catch(err) {
+        console.error('Error pujant foto:', err);
+        return null;
+    }
+}
+
+// ─── Panells i Lògica d'Edició ────────────────────────────────
+const backdrop  = document.getElementById('backdrop');
+const formPanel = document.getElementById('form-panel');
+const toolsPanel= document.getElementById('tools-panel');
+
+function getNextPointNumber() {
+    const customStart = parseInt(localStorage.getItem('custom_start_num')) || 1;
+    const nums = savedPoints.map(f=>f.properties.num_punt).filter(n=>typeof n==='number');
+    const maxSaved = nums.length > 0 ? Math.max(...nums) : 0;
+    return Math.max(customStart, maxSaved + 1);
+}
+
+function updateCustomStartNum(val) {
+    const num = parseInt(val);
+    if(!isNaN(num) && num > 0) {
+        localStorage.setItem('custom_start_num', num);
+        showNotification(`El proper punt serà el #${getNextPointNumber()}`, false, true);
+    }
+}
+
+function openNewPointForm() {
+    editingPointId = null;
+    document.getElementById('form-title-text').innerText = "Nou Punt";
+    document.getElementById('btn-save-text').innerText = "Guardar Punt al Mapa";
+    document.getElementById('edit-photo-info').innerText = "";
+    document.getElementById('form-info-gps').classList.remove('hidden');
+    document.getElementById('new-point-id').innerText = `#${getNextPointNumber()}`;
+    
+    document.getElementById('codi').value = '';
+    document.getElementById('tipus').value = '';
+    document.getElementById('notes').value = '';
+    
+    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    
+    document.getElementById('photoInput').value = '';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
+
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+}
+
+function editPoint(id) {
+    const feature = savedPoints.find(f => f.id === id);
+    if (!feature) return;
+
+    editingPointId = id; 
+    document.getElementById('form-title-text').innerText = "Editar Punt";
+    document.getElementById('btn-save-text').innerText = "Actualitzar Punt";
+    document.getElementById('form-info-gps').classList.add('hidden');
+    
+    currentLon = feature.geometry.coordinates[0];
+    currentLat = feature.geometry.coordinates[1];
+    const utm = wgs84ToUtm31(currentLon, currentLat);
+    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
+    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
+    if (userMarker) userMarker.setLatLng([currentLat, currentLon]); 
+
+    document.getElementById('new-point-id').innerText = `#${feature.properties.num_punt}`;
+    document.getElementById('codi').value = feature.properties.codi || '';
+    document.getElementById('tipus').value = feature.properties.tipus || '';
+    document.getElementById('notes').value = feature.properties.notes || '';
+
+    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    if (feature.properties.estat) {
+        const radio = document.querySelector(`input[name="estat"][value="${feature.properties.estat}"]`);
+        if (radio) {
+            radio.checked = true;
+            updateEstat(radio);
+        }
+    }
+
+    document.getElementById('photoInput').value = '';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Afegir més fotos (opcional)";
+    
+    const fotosPrevies = feature.properties.n_fotos || 0;
+    if(fotosPrevies > 0) {
+        document.getElementById('edit-photo-info').innerText = `(Ja té ${fotosPrevies} fotos anteriors)`;
+    } else {
+        document.getElementById('edit-photo-info').innerText = "";
+    }
+
+    map.closePopup();
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+}
+
+function openToolsPanel() {
+    document.getElementById('custom-start-num').value = getNextPointNumber();
+    backdrop.classList.remove('hidden');
+    setTimeout(()=>toolsPanel.classList.remove('translate-y-full'), 10);
+}
+
+function closeAllPanels() {
+    formPanel.classList.add('translate-y-full');
+    toolsPanel.classList.add('translate-y-full');
+    setTimeout(()=>backdrop.classList.add('hidden'), 300);
+}
+
+function updateEstat(radio) {
+    document.querySelectorAll('[id^=estat-]').forEach(l=>
+        l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    const colors={bo:['ring-green-400','bg-green-50'],regular:['ring-yellow-400','bg-yellow-50'],dolent:['ring-red-400','bg-red-50']};
+    const lbl = document.getElementById(`estat-${radio.value}-label`);
+    if(lbl && colors[radio.value]) lbl.classList.add('ring-2','ring-offset-1',...colors[radio.value]);
+}
+
+function showNotification(msg, isError=false, isInfo=false) {
+    const area  = document.getElementById('notification-area');
+    const notif = document.createElement('div');
+    notif.className = `notification ${isError?'error':''} ${isInfo?'info':''}`;
+    notif.innerText = msg;
+    area.appendChild(notif);
+    setTimeout(()=>{ notif.style.opacity='0'; setTimeout(()=>notif.remove(),500); }, 3500);
+}
+
+// ─── Mapa ──────────────────────────────────────────────────────
+function initMap() {
+    map = L.map('map',{zoomControl:false}).setView([41.7286,1.8201],14);
+    L.control.zoom({position:'topright'}).addTo(map);
+    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'&copy; Esri'});
+    const esriSat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'&copy; Esri'});
+    const osm        = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OSM'});
+    esriStreet.addTo(map);
+    L.control.layers({"Carrers":esriStreet,"Satèl·lit":esriSat,"OSM":osm},{},{position:'topright'}).addTo(map);
+    
+    map.on('click',e=>{ 
+        if(editingPointId === null) {
+            updatePosition(e.latlng.lat,e.latlng.lng); 
+            showNotification("📍 Coordenades actualitzades.",false,true); 
+        } else {
+            updatePosition(e.latlng.lat,e.latlng.lng);
+            showNotification("📍 S'ha desplaçat la ubicació del punt.",false,true);
+        }
+    });
+    
+    loadSavedPoints();
+    locateUser();
+    setTimeout(()=>map.invalidateSize(), 500);
+}
+
+function updatePosition(lat, lon) {
+    currentLat = lat; currentLon = lon;
+    const utm = wgs84ToUtm31(lon, lat);
+    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
+    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
+    const ll = [lat,lon];
+    if (userMarker) { userMarker.setLatLng(ll); }
+    else {
+        userMarker = L.marker(ll,{icon:L.divIcon({className:'',html:"<div style='background:#3b82f6;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 4px rgba(59,130,246,0.3);'></div>",iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:1000}).addTo(map);
+    }
+}
+
+function locateUser() {
+    if(!navigator.geolocation){ showNotification("Sense suport GPS",true); return; }
+    document.getElementById('lat-display').innerText = "Buscant...";
+    document.getElementById('lon-display').innerText = "Buscant...";
+    navigator.geolocation.getCurrentPosition(
+        p=>{ 
+            if(editingPointId !== null) showNotification("📍 Atenció: S'està reubicant el punt a la teva posició GPS.", false, true);
+            updatePosition(p.coords.latitude,p.coords.longitude); 
+            map.flyTo([p.coords.latitude,p.coords.longitude],17); 
+            if(editingPointId === null) showNotification("✅ GPS trobat!"); 
+        },
+        ()=>showNotification("Sense GPS. Toca el mapa.",true),
+        {enableHighAccuracy:true,maximumAge:10000,timeout:12000}
+    );
+}
+
+// ─── Processament de fotos ───────────────────────────────
+async function handlePhoto(event) {
+    const files = event.target.files;
+    if (!files || !files.length) return;
+    const MAX_WIDTH=800, QUALITY=0.65, MAX_FOTOS=5;
+    const previewContainer = document.getElementById('photo-preview-container');
+    previewContainer.classList.remove('hidden');
+    const disponibles = MAX_FOTOS - currentPhotosFiles.length;
+    const aProcessar  = Math.min(files.length, disponibles);
+    if (disponibles<=0) { showNotification(`Màxim ${MAX_FOTOS} fotos noves per vegada.`,true); return; }
+
+    for (let i=0; i<aProcessar; i++) {
+        document.getElementById('photo-label').innerText = `Processant foto ${i+1} de ${aProcessar}...`;
+        await new Promise(r=>setTimeout(r,300)); 
+
+        await new Promise((resolve) => {
+            const objectUrl = URL.createObjectURL(files[i]);
+            const img = new Image();
+            img.onload = function() {
+                URL.revokeObjectURL(objectUrl);
+                const scale = img.width>MAX_WIDTH ? MAX_WIDTH/img.width : 1;
+                const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+                const canvas = document.createElement('canvas');
+                canvas.width=w; canvas.height=h;
+                canvas.getContext('2d').drawImage(img,0,0,w,h);
+                canvas.toBlob(function(blob) {
+                    canvas.width=0; canvas.height=0;
+                    if (!blob) { resolve(); return; }
+                    currentPhotosFiles.push(blob);
+                    const prevUrl = URL.createObjectURL(blob);
+                    previewUrls.push(prevUrl);
+                    const imgEl = document.createElement('img');
+                    imgEl.src = prevUrl;
+                    imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
+                    previewContainer.appendChild(imgEl);
+                    resolve();
+                }, 'image/jpeg', QUALITY);
+            };
+            img.onerror = ()=>resolve();
+            img.src = objectUrl;
+        });
+    }
+    document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} foto/es nova/es preparades ✓`;
+    if (files.length>aProcessar) showNotification(`S'han limitat a ${MAX_FOTOS} fotos noves.`,false,true);
+    event.target.value='';
+}
+
+// ─── Guardar / Actualitzar punt ─────────────────────────────────────────────
+async function savePoint() {
+    if (currentLat===null || currentLon===null) {
+        showNotification("Espera GPS o toca el mapa.",true); return;
+    }
+    const notes  = document.getElementById('notes').value.trim();
+    const codi   = document.getElementById('codi').value.trim();
+    const tipus  = document.getElementById('tipus').value;
+    const estatR = document.querySelector('input[name="estat"]:checked');
+    const estat  = estatR ? estatR.value : '';
+    
+    const isEditing = editingPointId !== null;
+    let featureToEdit = null;
+    let numPunt;
+
+    if (isEditing) {
+        featureToEdit = savedPoints.find(f => f.id === editingPointId);
+        numPunt = featureToEdit.properties.num_punt;
+    } else {
+        numPunt = getNextPointNumber();
+    }
+
+    let newTelegramUrls=[], newTelegramIds=[];
+    if (currentPhotosFiles.length>0) {
+        showNotification("📤 Pujant fotos a Telegram...",false,true);
+        for (let i=0; i<currentPhotosFiles.length; i++) {
+            const startIdx = isEditing ? (featureToEdit.properties.n_fotos || 0) : 0;
+            const r = await uploadPhotoToTelegram(currentPhotosFiles[i], numPunt, startIdx + i + 1);
+            if (r) { newTelegramUrls.push(r.fileUrl); newTelegramIds.push(r.fileId); }
+            else showNotification(`⚠️ No s'ha pogut pujar la foto nova ${i+1}.`,true);
+        }
+        if (newTelegramUrls.length>0) showNotification(`✅ ${newTelegramUrls.length} foto/es pujades a Telegram!`);
+    }
+
+    if (isEditing) {
+        featureToEdit.geometry.coordinates = [parseFloat(currentLon.toFixed(8)), parseFloat(currentLat.toFixed(8))];
+        featureToEdit.properties.codi = codi;
+        featureToEdit.properties.tipus = tipus;
+        featureToEdit.properties.estat = estat;
+        featureToEdit.properties.notes = notes;
+        featureToEdit.properties.utm_x = wgs84ToUtm31(currentLon,currentLat).x;
+        featureToEdit.properties.utm_y = wgs84ToUtm31(currentLon,currentLat).y;
+        featureToEdit.properties.lat = parseFloat(currentLat.toFixed(8));
+        featureToEdit.properties.lon = parseFloat(currentLon.toFixed(8));
+        
+        if(newTelegramUrls.length > 0) {
+            let oldUrls = [];
+            if (Array.isArray(featureToEdit.properties.foto_urls)) oldUrls = featureToEdit.properties.foto_urls;
+            else if (typeof featureToEdit.properties.foto_urls === 'string') oldUrls = featureToEdit.properties.foto_urls.split('|').filter(Boolean);
+            
+            let oldIds = [];
+            if (Array.isArray(featureToEdit.properties.foto_ids)) oldIds = featureToEdit.properties.foto_ids;
+            else if (typeof featureToEdit.properties.foto_ids === 'string') oldIds = featureToEdit.properties.foto_ids.split('|').filter(Boolean);
+
+            featureToEdit.properties.foto_urls = [...oldUrls, ...newTelegramUrls];
+            featureToEdit.properties.foto_ids = [...oldIds, ...newTelegramIds];
+            featureToEdit.properties.n_fotos = (featureToEdit.properties.n_fotos || 0) + newTelegramUrls.length;
+        }
+
+        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+        showNotification(`✅ Punt #${numPunt} actualitzat!`);
+
+    } else {
+        const newFeature = {
+            type:"Feature", id:Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            geometry:{type:"Point",coordinates:[parseFloat(currentLon.toFixed(8)),parseFloat(currentLat.toFixed(8))]},
+            properties:{
+                num_punt: numPunt, codi:codi, tipus:tipus, estat:estat,
+                notes:notes, data_hora:new Date().toISOString(),
+                utm_x:wgs84ToUtm31(currentLon,currentLat).x,
+                utm_y:wgs84ToUtm31(currentLon,currentLat).y,
+                lat:parseFloat(currentLat.toFixed(8)), lon:parseFloat(currentLon.toFixed(8)),
+                n_fotos:currentPhotosFiles.length, foto_urls:newTelegramUrls, foto_ids:newTelegramIds, fotos:[]
+            }
+        };
+        savedPoints.push(newFeature);
+        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+        showNotification(`✅ Punt #${numPunt} guardat!`);
+    }
+
+    refreshMapMarkers();
+
+    editingPointId = null;
+    document.getElementById('notes').value='';
+    document.getElementById('codi').value='';
+    document.getElementById('tipus').value='';
+    document.getElementById('photoInput').value='';
+    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
+    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
+    closeAllPanels();
+}
+
+// ─── Marcadors al mapa ────────────────────────────────────────
+function refreshMapMarkers() {
+    map.eachLayer((layer) => {
+        if (layer instanceof L.Marker && layer !== userMarker) {
+            map.removeLayer(layer);
+        }
+    });
+    savedPoints.forEach(f => addMarkerToMap(f));
+    updatePointsCount();
+}
+
+function addMarkerToMap(feature, isImported=false) {
+    const coords=feature.geometry.coordinates, props=feature.properties||{};
+    const color={'bo':'#22c55e','regular':'#f59e0b','dolent':'#ef4444'}[props.estat]||(isImported?'#8b5cf6':'#ef4444');
+    const icon=L.divIcon({className:'',html:`<div style="background:${color};width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,.35);"></div>`,iconSize:[18,18],iconAnchor:[9,18],popupAnchor:[0,-20]});
+    const marker=L.marker([coords[1],coords[0]],{icon}).addTo(map);
+    
+    let html=`<div class="popup-content"><div class="popup-id">Punt #${props.num_punt||'?'}${props.codi?' · '+props.codi:''}</div>`;
+    
+    if(props.tipus) html+=`<div class="popup-row"><b>Tipus:</b> ${props.tipus}</div>`;
+    
+    if(props.estat) {
+        const emoji = {'bo':'✅', 'regular':'⚠️', 'dolent':'❌'}[props.estat] || '';
+        html+=`<div class="popup-row"><b>Estat:</b> ${emoji} ${props.estat}</div>`;
+    }
+    
+    if(props.notes) html+=`<div class="popup-row"><b>Notes:</b> ${props.notes}</div>`;
+    
+    let urls = [];
+    if (Array.isArray(props.foto_urls)) urls = props.foto_urls;
+    else if (typeof props.foto_urls === 'string') urls = props.foto_urls.split('|').filter(Boolean);
+    else if (Array.isArray(props.fotos)) urls = props.fotos;
+
+    let ids = [];
+    if (Array.isArray(props.foto_ids)) ids = props.foto_ids;
+    else if (typeof props.foto_ids === 'string') ids = props.foto_ids.split('|').filter(Boolean);
+
+    if(urls.length>0){
+        html+=`<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">`;
+        urls.slice(0,3).forEach((f, index) => {
+            const fileId = ids[index] || '';
+            html+=`<img src="${f}" onerror="refreshTelegramImage(this, '${fileId}')" style="width:100%;max-height:140px;object-fit:cover;border-radius:4px;">`;
+        });
+        if(urls.length>3) html+=`<span class="popup-fotos-label">+${urls.length-3} més</span>`;
+        html+=`</div>`;
+    } else if(props.n_fotos>0) {
+        html+=`<div class="popup-fotos-label">📷 ${props.n_fotos} foto/es a Telegram</div>`;
+    }
+    
+    if(props.data_hora){ const d=new Date(props.data_hora); html+=`<div style="margin-top:6px;font-size:10px;color:#9ca3af;">${isNaN(d)?props.data_hora:d.toLocaleString('ca-ES')}</div>`; }
+    
+    html += `<div style="margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; text-align:right;">
+                <button onclick="editPoint('${feature.id}')" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.2);">✏️ Edita</button>
+             </div>`;
+    
+    html+=`</div>`;
+    marker.bindPopup(html,{maxWidth:300});
+}
+
+function loadSavedPoints() {
+    try {
+        const stored=localStorage.getItem('inspeccions_qgis');
+        if(stored){ savedPoints=JSON.parse(stored); refreshMapMarkers(); }
+    } catch(e){ showNotification("Error carregant dades locals.",true); }
+}
+
+function updatePointsCount() { document.getElementById('points-count').innerText=savedPoints.length; }
+
+function importGeoJSON(event) {
+    const file=event.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=function(e){
+        try {
+            const gj=JSON.parse(e.target.result);
+            const features=gj.type==="FeatureCollection"?gj.features:(gj.type==="Feature"?[gj]:[]);
+            if(!features.length){ showNotification("GeoJSON no vàlid.",true); return; }
+            const ids=new Set(savedPoints.map(f=>f.properties?.num_punt||f.id).filter(Boolean));
+            let afegits=0, dups=0;
+            features.forEach(f=>{
+                const fid=f.properties?.num_punt||f.id;
+                if(fid&&ids.has(fid)){ dups++; return; }
+                if(!f.properties) f.properties={};
+                if(!f.properties.fotos) f.properties.fotos=[];
+                if(!f.id) f.id = Date.now().toString() + Math.random().toString(36).substr(2, 5); 
+                savedPoints.push(f); afegits++;
+            });
+            localStorage.setItem('inspeccions_qgis',JSON.stringify(savedPoints));
+            refreshMapMarkers();
+            try{ const b=L.geoJSON(features).getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[60,60]}); }catch(_){}
+            closeAllPanels();
+            showNotification(`✅ ${afegits} punt/s importat/s${dups>0?` (${dups} dups ignorats)`:''}!`);
+        } catch(err){ showNotification("Error llegint GeoJSON.",true); console.error(err); }
+        event.target.value='';
+    };
+    reader.readAsText(file);
+}
+
+function clearData() {
+    if(confirm("Segur? Assegura't d'exportar primer!")){ localStorage.removeItem('inspeccions_qgis'); location.reload(); }
+}
+
+function exportGeoJSONonly() {
+    if(!savedPoints.length){ showNotification("Sense punts.",true); return; }
+    const feats=JSON.parse(JSON.stringify(savedPoints));
+    const baseUrl = window.location.origin + window.location.pathname; 
+
+    feats.forEach(f=>{
+        const urls = Array.isArray(f.properties.foto_urls) ? f.properties.foto_urls : (typeof f.properties.foto_urls === 'string' ? f.properties.foto_urls.split('|').filter(Boolean) : []);
+        const ids = Array.isArray(f.properties.foto_ids) ? f.properties.foto_ids : (typeof f.properties.foto_ids === 'string' ? f.properties.foto_ids.split('|').filter(Boolean) : []);
+        
+        const viewerUrls = urls.map((u, i) => `${baseUrl}?view_img=${encodeURIComponent(u)}&file_id=${ids[i]||''}`);
+
+        delete f.properties.fotos;
+        f.properties.foto_urls=urls.join('|'); 
+        f.properties.foto_ids=ids.join('|'); 
+        f.properties.arxius_fotos=urls.join('|');
+        f.properties.enllac_visor = viewerUrls.length > 0 ? viewerUrls[0] : ''; 
+        f.properties.n_fotos=urls.length||f.properties.n_fotos||0;
+    });
+    downloadFile(JSON.stringify(buildGeoJSONExport(feats),null,2),`inspeccions_${dateStr()}.geojson`,'application/geo+json');
+    closeAllPanels(); showNotification("GeoJSON exportat!");
+}
+
+async function exportDataAsZip() {
+    if(!savedPoints.length){ showNotification("Sense punts.",true); return; }
+    showNotification("⏳ Generant ZIP...",false,true);
+    try {
+        const zip=new JSZip();
+        const feats=JSON.parse(JSON.stringify(savedPoints));
+        const baseUrl = window.location.origin + window.location.pathname; 
+
+        feats.forEach(f=>{
+            const urls = Array.isArray(f.properties.foto_urls) ? f.properties.foto_urls : (typeof f.properties.foto_urls === 'string' ? f.properties.foto_urls.split('|').filter(Boolean) : []);
+            const ids = Array.isArray(f.properties.foto_ids) ? f.properties.foto_ids : (typeof f.properties.foto_ids === 'string' ? f.properties.foto_ids.split('|').filter(Boolean) : []);
+            
+            const viewerUrls = urls.map((u, i) => `${baseUrl}?view_img=${encodeURIComponent(u)}&file_id=${ids[i]||''}`);
+
+            delete f.properties.fotos;
+            f.properties.foto_urls=urls.join('|'); 
+            f.properties.foto_ids=ids.join('|');
+            f.properties.arxius_fotos=urls.join('|');
+            f.properties.enllac_visor = viewerUrls.length > 0 ? viewerUrls[0] : ''; 
+            if(typeof f.properties.n_fotos==='undefined') f.properties.n_fotos=urls.length;
+        });
+        zip.file("mapa_inspeccions.geojson", JSON.stringify(buildGeoJSONExport(feats),null,2));
+        zip.file("LLEGIR.txt","QGIS: Importa mapa_inspeccions.geojson\nFes clic al camp 'enllac_visor' per obrir la foto directament al navegador (Visor Web).\nCRS: WGS84 (EPSG:4326)\n");
+        const content=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
+        downloadBlob(content,`inspeccions_camp_${dateStr()}.zip`);
+        closeAllPanels(); showNotification("✅ ZIP descarregat!");
+    } catch(err){ console.error(err); showNotification("Error exportant ZIP.",true); }
+}
+
+function buildGeoJSONExport(features) {
+    return {"type":"FeatureCollection","name":"Inspeccions_Camp","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":features};
+}
+
+function dateStr(){ return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+function downloadFile(content,filename,mime){ downloadBlob(new Blob([content],{type:mime}),filename); }
+function downloadBlob(blob,filename){
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+}
+
+// ─── Exposar funcions globalment pels botons HTML ───
+window.updateCustomStartNum = updateCustomStartNum;
+window.openToolsPanel = openToolsPanel;
+window.closeAllPanels = closeAllPanels;
+window.locateUser = locateUser;
+window.openNewPointForm = openNewPointForm;
+window.editPoint = editPoint;
+window.updateEstat = updateEstat;
+window.handlePhoto = handlePhoto;
+window.savePoint = savePoint;
+window.openTelegramModal = openTelegramModal;
+window.closeTelegramModalIfConfigured = closeTelegramModalIfConfigured;
+window.saveTelegramConfig = saveTelegramConfig;
+window.exportDataAsZip = exportDataAsZip;
+window.exportGeoJSONonly = exportGeoJSONonly;
+window.importGeoJSON = importGeoJSON;
+window.clearData = clearData;
+
+window.onload = () => {
+    // ─── VISOR D'IMATGES EXCLUSIU (Integrat) ───
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewImg = urlParams.get('view_img');
+    const fileId = urlParams.get('file_id') || '';
+    
+    if (viewImg) {
+        document.title = "Visor de Fotografia";
+        document.body.innerHTML = `
+            <div style="background-color: #111827; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; padding: 20px; box-sizing: border-box; font-family: sans-serif;">
+                <!-- Aquí apliquem la funció onerror perquè carregui de nou la foto si està caducada -->
+                <img src="${viewImg}" onerror="refreshTelegramImage(this, '${fileId}')" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.8);">
+                <div style="margin-top: 24px; display: flex; gap: 16px;">
+                    <a href="${window.location.pathname}" style="padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Tornar a l'App</a>
+                    <a href="${viewImg}" id="viewer-download-btn" target="_blank" download style="padding: 12px 24px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; border: 1px solid #4b5563;">Obrir Directe</a>
+                </div>
+            </div>
+        `;
+        return; 
+    }
+
+    initMap();
+    if (!TG_TOKEN || !TG_CHAT_ID) setTimeout(()=>openTelegramModal(), 600);
+};
 </script>
 </body>
 </html>
