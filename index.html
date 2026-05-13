@@ -146,15 +146,28 @@
             <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
             <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
         </div>
+        
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Fotografies <span class="text-gray-400 font-normal text-xs" id="edit-photo-info"></span></label>
-            <label class="border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold p-4 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-100">
-                <i data-lucide="camera"></i>
-                <span id="photo-label">Fer fotos o seleccionar-ne</span>
-                <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhoto(event)">
-            </label>
+            
+            <div class="flex gap-2">
+                <label class="flex-1 border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold py-3 px-2 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-blue-100 transition">
+                    <i data-lucide="camera" class="w-6 h-6"></i>
+                    <span class="text-sm">Càmera</span>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)">
+                </label>
+                
+                <label class="flex-1 border-2 border-dashed border-purple-300 bg-purple-50 text-purple-700 font-semibold py-3 px-2 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-purple-100 transition">
+                    <i data-lucide="image" class="w-6 h-6"></i>
+                    <span class="text-sm">Galeria</span>
+                    <input type="file" accept="image/*" multiple class="hidden" onchange="handlePhoto(event)">
+                </label>
+            </div>
+            
+            <div id="photo-status" class="text-center text-xs text-gray-500 font-medium mt-1">Sense fotos noves</div>
             <div id="photo-preview-container" class="hidden mt-2 grid grid-cols-2 gap-2"></div>
         </div>
+
         <button onclick="savePoint()" class="w-full bg-blue-600 text-white py-4 mt-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-md">
             <i data-lucide="save"></i> <span id="btn-save-text">Guardar Punt al Mapa</span>
         </button>
@@ -379,10 +392,9 @@ function openNewPointForm() {
     document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
     document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
     
-    document.getElementById('photoInput').value = '';
     previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
     const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
-    document.getElementById('photo-label').innerText="Fer fotos o seleccionar-ne";
+    document.getElementById('photo-status').innerText = "Sense fotos noves";
 
     backdrop.classList.remove('hidden');
     setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
@@ -416,10 +428,9 @@ function editPoint(id) {
         if (radio) { radio.checked = true; updateEstat(radio); }
     }
 
-    document.getElementById('photoInput').value = '';
     previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
     const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
-    document.getElementById('photo-label').innerText="Afegir més fotos (opcional)";
+    document.getElementById('photo-status').innerText = "Sense fotos noves";
     
     const fotosPrevies = feature.properties.n_fotos || 0;
     document.getElementById('edit-photo-info').innerText = fotosPrevies > 0 ? `(Ja té ${fotosPrevies} fotos anteriors)` : "";
@@ -515,7 +526,8 @@ async function handlePhoto(event) {
         imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
         previewContainer.appendChild(imgEl);
     }
-    document.getElementById('photo-label').innerText = `${currentPhotosFiles.length} fotos preparades ✓`;
+    document.getElementById('photo-status').innerText = `${currentPhotosFiles.length} foto/es nova/es preparada/es ✓`;
+    event.target.value = ''; // Reseteja l'input perquè puguis anar afegint fotos poc a poc
 }
 
 // ─── Guardar ─────────────────────────────────────────────
@@ -620,14 +632,10 @@ function exportGeoJSONonly() {
     const baseUrl = window.location.origin + window.location.pathname; 
 
     feats.forEach((f, index) => {
-        // 1. Transformem ID a número sencer (FID)
         f.id = parseInt(f.properties.num_punt) || (index + 1);
-        
-        // 2. Transformem coordenades a UTM
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
 
-        // 3. Preparem metadades de fotos
         const urls = f.properties.foto_urls || [];
         const ids = f.properties.foto_ids || [];
         f.properties.foto_urls = urls.join('|'); 
