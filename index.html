@@ -92,31 +92,38 @@
         </h1>
         <div class="flex items-center gap-2">
             <span id="new-point-id" class="text-xs bg-blue-50 text-blue-600 font-mono px-2 py-1 rounded-full border border-blue-200"></span>
+            <button id="btn-delete-point" onclick="deleteCurrentPoint()" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-full mr-1">
+                <i data-lucide="trash-2"></i>
+            </button>
             <button onclick="closeAllPanels()" class="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
                 <i data-lucide="x"></i>
             </button>
         </div>
     </div>
     <div class="p-5 overflow-y-auto flex flex-col gap-4">
+        <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <input type="checkbox" id="revisat" class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+            <label for="revisat" class="font-bold text-gray-700 cursor-pointer">Marcar com a REVISAT</label>
+        </div>
+
         <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-700" id="form-info-gps">
             <i data-lucide="info" class="inline w-4 h-4"></i> Si no tens GPS, tanca i toca el mapa per situar-te.
         </div>
-        <div class="bg-purple-50 p-3 rounded-lg text-xs text-purple-700 flex items-center gap-2">
-            <span class="text-base">✈️</span>
-            <span>Les fotos es pujaran a <strong>Telegram</strong> com a fitxer (preserva metadades GPS i EXIF).</span>
-        </div>
+        
         <div class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 font-mono flex justify-between items-center">
             <div><strong>X:</strong> <span id="lat-display">Buscant...</span></div>
             <div><strong>Y:</strong> <span id="lon-display">Buscant...</span></div>
             <button onclick="locateUser()" class="text-blue-500 p-1"><i data-lucide="locate" class="w-4 h-4"></i></button>
         </div>
+
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">FID <span class="text-gray-400 font-normal text-xs">(opcional, únicament numèric)</span></label>
-            <input type="number" id="codi" inputmode="numeric" pattern="[0-9]*" min="0" step="1" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: 1, 23, 456...">
+            <label class="font-semibold text-gray-700 text-sm">FID <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
+            <input type="number" id="codi" inputmode="numeric" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 1, 23...">
         </div>
+
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Tipus</label>
-            <select id="tipus" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+            <select id="tipus" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                 <option value="">-- Selecciona --</option>
                 <option value="incidencia">Incidència</option>
                 <option value="element">Element inventariat</option>
@@ -125,6 +132,7 @@
                 <option value="altres">Altres</option>
             </select>
         </div>
+
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Estat</label>
             <div class="flex gap-2">
@@ -142,28 +150,26 @@
                 </label>
             </div>
         </div>
+
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
-            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Descriu l'estat, anomalies, mesures..."></textarea>
+            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Notes..."></textarea>
         </div>
         
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Fotografies <span class="text-gray-400 font-normal text-xs" id="edit-photo-info"></span></label>
-            
             <div class="flex gap-2">
                 <label class="flex-1 border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-semibold py-3 px-2 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-blue-100 transition">
                     <i data-lucide="camera" class="w-6 h-6"></i>
                     <span class="text-sm">Càmera</span>
                     <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)">
                 </label>
-                
                 <label class="flex-1 border-2 border-dashed border-purple-300 bg-purple-50 text-purple-700 font-semibold py-3 px-2 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-purple-100 transition">
                     <i data-lucide="image" class="w-6 h-6"></i>
                     <span class="text-sm">Galeria</span>
                     <input type="file" accept="image/*" multiple class="hidden" onchange="handlePhoto(event)">
                 </label>
             </div>
-            
             <div id="photo-status" class="text-center text-xs text-gray-500 font-medium mt-1">Sense fotos noves</div>
             <div id="photo-preview-container" class="hidden mt-2 grid grid-cols-2 gap-2"></div>
         </div>
@@ -185,37 +191,21 @@
         <div class="text-center font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
             Punts emmagatzemats: <span id="points-count" class="text-blue-600 text-xl font-bold">0</span>
         </div>
-
         <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
             <label for="custom-start-num" class="text-sm font-semibold text-gray-700">Començar numeració pel punt:</label>
-            <div class="flex items-center gap-1">
-                <span class="text-gray-500 font-mono">#</span>
-                <input type="number" id="custom-start-num" min="1" onchange="updateCustomStartNum(this.value)" class="w-16 border border-gray-300 rounded-md p-1.5 text-center font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
+            <input type="number" id="custom-start-num" min="1" onchange="updateCustomStartNum(this.value)" class="w-16 border border-gray-300 rounded-md p-1.5 text-center font-bold text-blue-600 outline-none">
         </div>
-
-        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 border border-blue-200 mt-2">
+        <button onclick="openTelegramModal()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-blue-200 mt-2">
             <i data-lucide="send" class="w-5 h-5"></i> Configurar Bot de Telegram
         </button>
-        <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
-            <strong>📐 QGIS i SIG:</strong> L'exportació ara utilitza **EPSG:25831 (UTM)** i IDs numèrics per a màxima compatibilitat.
-        </div>
-        <div class="h-px bg-gray-100"></div>
-        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Exportar</p>
-        <button onclick="exportDataAsZip()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-green-700 shadow-sm">
+        <div class="h-px bg-gray-100 my-2"></div>
+        <button onclick="exportDataAsZip()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-sm">
             <i data-lucide="folder-down"></i> Exportar ZIP (GeoJSON)
         </button>
-        <button onclick="exportGeoJSONonly()" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-teal-700 shadow-sm">
+        <button onclick="exportGeoJSONonly()" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-sm mt-2">
             <i data-lucide="file-down"></i> Exportar GeoJSON directe
         </button>
-        <div class="h-px bg-gray-100"></div>
-        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Importar</p>
-        <label class="flex items-center justify-center gap-2 w-full bg-purple-50 text-purple-700 py-3 rounded-lg font-semibold cursor-pointer hover:bg-purple-100 border border-purple-200">
-            <i data-lucide="upload" class="w-5 h-5"></i> Importar GeoJSON
-            <input type="file" accept=".geojson,.json" class="hidden" onchange="importGeoJSON(event)">
-        </label>
-        <div class="h-px bg-gray-100"></div>
-        <button onclick="clearData()" class="w-full bg-red-50 text-red-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 border border-red-200">
+        <button onclick="clearData()" class="w-full bg-red-50 text-red-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-red-200 mt-4">
             <i data-lucide="trash-2"></i> Esborrar totes les dades
         </button>
     </div>
@@ -224,34 +214,11 @@
 <div id="telegram-modal" class="fixed inset-0 z-[700] hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTelegramModalIfConfigured()"></div>
     <div class="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-md overflow-hidden">
-        <div class="p-5 bg-blue-600 text-white flex items-center gap-2">
-            <i data-lucide="send"></i>
-            <h2 class="text-lg font-bold">Connexió a Telegram</h2>
-        </div>
+        <div class="p-5 bg-blue-600 text-white flex items-center gap-2 font-bold">Connexió Telegram</div>
         <div class="p-5 flex flex-col gap-4">
-            <p class="text-sm text-gray-600">
-                Les dades es guarden <strong>només al teu dispositiu</strong>. L'ID de les fotos és necessari per al visor web.
-            </p>
-            <div class="flex flex-col gap-1">
-                <label class="font-semibold text-gray-700 text-sm">Token del Bot</label>
-                <input type="text" id="tg-token-input" autocomplete="off"
-                    class="border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Ex: 123456789:ABCdef...">
-            </div>
-            <div class="flex flex-col gap-1">
-                <label class="font-semibold text-gray-700 text-sm">Chat ID del grup</label>
-                <input type="text" id="tg-chatid-input" autocomplete="off"
-                    class="border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Ex: -100123456789">
-            </div>
-            <button onclick="saveTelegramConfig()"
-                class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-blue-700 shadow-md">
-                <i data-lucide="save" class="w-5 h-5"></i> Guardar al dispositiu
-            </button>
-            <button id="btn-cancel-tg" onclick="closeTelegramModalIfConfigured()"
-                class="w-full bg-gray-100 text-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-200">
-                Tancar
-            </button>
+            <input type="text" id="tg-token-input" class="border p-3 rounded-lg outline-none" placeholder="Token del Bot">
+            <input type="text" id="tg-chatid-input" class="border p-3 rounded-lg outline-none" placeholder="Chat ID">
+            <button onclick="saveTelegramConfig()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Guardar</button>
         </div>
     </div>
 </div>
@@ -259,186 +226,135 @@
 <script>
 lucide.createIcons();
 
-// ─── Variables globals ─────────────────────────────────────────
 let map, userMarker, currentLat = null, currentLon = null;
 let currentPhotosFiles = [];
 let previewUrls = [];
 let savedPoints = [];
 let editingPointId = null;
 
-// ─── Telegram: dades al dispositiu ────────────────
 let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
 let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 
 function openTelegramModal() {
     document.getElementById('tg-token-input').value  = TG_TOKEN;
     document.getElementById('tg-chatid-input').value = TG_CHAT_ID;
-    const modal = document.getElementById('telegram-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    document.getElementById('btn-cancel-tg').classList.toggle('hidden', !TG_TOKEN || !TG_CHAT_ID);
+    document.getElementById('telegram-modal').classList.replace('hidden', 'flex');
 }
 
 function closeTelegramModalIfConfigured() {
-    if (!TG_TOKEN || !TG_CHAT_ID) {
-        showNotification("Has de configurar el Bot de Telegram primer.", true);
-        return;
-    }
-    const modal = document.getElementById('telegram-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    if (TG_TOKEN && TG_CHAT_ID) document.getElementById('telegram-modal').classList.replace('flex', 'hidden');
 }
 
 function saveTelegramConfig() {
-    const t = document.getElementById('tg-token-input').value.trim();
-    const c = document.getElementById('tg-chatid-input').value.trim();
-    if (!t || !c) { showNotification("Omple els dos camps.", true); return; }
-    TG_TOKEN   = t;
-    TG_CHAT_ID = c;
-    localStorage.setItem('tg_token',   TG_TOKEN);
+    TG_TOKEN   = document.getElementById('tg-token-input').value.trim();
+    TG_CHAT_ID = document.getElementById('tg-chatid-input').value.trim();
+    localStorage.setItem('tg_token', TG_TOKEN);
     localStorage.setItem('tg_chat_id', TG_CHAT_ID);
-    showNotification("✅ Configuració guardada al dispositiu!");
-    document.getElementById('telegram-modal').classList.add('hidden');
-    document.getElementById('telegram-modal').classList.remove('flex');
+    document.getElementById('telegram-modal').classList.replace('flex', 'hidden');
 }
 
-// ─── Refrescar imatges de Telegram ────
 window.refreshTelegramImage = async function(img, fileId) {
-    if (!fileId || img.dataset.retried) {
-        img.style.display = 'none';
-        return;
-    }
+    if (!fileId || img.dataset.retried || !TG_TOKEN) { img.style.display = 'none'; return; }
     img.dataset.retried = 'true';
-    
-    const token = localStorage.getItem('tg_token');
-    if (!token) return;
-    
     try {
-        const resp = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
         const data = await resp.json();
-        if (data.ok) {
-            const freshUrl = `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
-            img.src = freshUrl;
-            const downloadBtn = document.getElementById('viewer-download-btn');
-            if(downloadBtn) downloadBtn.href = freshUrl;
-        } else {
-            img.style.display = 'none';
-        }
-    } catch(e) {
-        img.style.display = 'none';
-    }
+        if (data.ok) img.src = `https://api.telegram.org/file/bot${TG_TOKEN}/${data.result.file_path}`;
+        else img.style.display = 'none';
+    } catch(e) { img.style.display = 'none'; }
 };
 
-// ─── Projecció EPSG:25831 ──────────────────────────────────────
 proj4.defs("EPSG:25831","+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
 function wgs84ToUtm31(lon, lat) {
     const [x,y] = proj4("EPSG:4326","EPSG:25831",[lon,lat]);
     return { x: Math.round(x*100)/100, y: Math.round(y*100)/100 };
 }
 
-// ─── Telegram upload ──────────────────────────────────────────
 async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     if (!TG_TOKEN || !TG_CHAT_ID) return null;
     try {
-        const filename = `punt${numPunt}_foto${fotoIndex}.jpg`;
         const fd = new FormData();
         fd.append('chat_id', TG_CHAT_ID);
-        fd.append('caption', `📍 Punt #${numPunt} · Foto ${fotoIndex}`);
-        fd.append('document', blob, filename);
+        fd.append('document', blob, `p${numPunt}_f${fotoIndex}.jpg`);
         const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`, {method:'POST', body:fd});
         const data = await resp.json();
         if (!data.ok) return null;
-        const fileId   = data.result.document.file_id;
+        const fileId = data.result.document.file_id;
         const fileResp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
         const fileData = await fileResp.json();
         return { fileId, fileUrl: `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}` };
-    } catch(err) {
-        return null;
-    }
+    } catch(err) { return null; }
 }
 
-// ─── Panells ──────────────────────────────────────────────────
-const backdrop  = document.getElementById('backdrop');
+const backdrop = document.getElementById('backdrop');
 const formPanel = document.getElementById('form-panel');
-const toolsPanel= document.getElementById('tools-panel');
+const toolsPanel = document.getElementById('tools-panel');
 
 function getNextPointNumber() {
     const customStart = parseInt(localStorage.getItem('custom_start_num')) || 1;
     const nums = savedPoints.map(f=>f.properties.num_punt).filter(n=>typeof n==='number');
-    const maxSaved = nums.length > 0 ? Math.max(...nums) : 0;
-    return Math.max(customStart, maxSaved + 1);
+    return Math.max(customStart, (nums.length > 0 ? Math.max(...nums) : 0) + 1);
 }
 
 function updateCustomStartNum(val) {
     const num = parseInt(val);
-    if(!isNaN(num) && num > 0) {
-        localStorage.setItem('custom_start_num', num);
-        showNotification(`El proper punt serà el #${getNextPointNumber()}`, false, true);
-    }
+    if(!isNaN(num) && num > 0) localStorage.setItem('custom_start_num', num);
 }
 
 function openNewPointForm() {
     editingPointId = null;
     document.getElementById('form-title-text').innerText = "Nou Punt";
-    document.getElementById('btn-save-text').innerText = "Guardar Punt al Mapa";
-    document.getElementById('edit-photo-info').innerText = "";
-    document.getElementById('form-info-gps').classList.remove('hidden');
+    document.getElementById('btn-delete-point').classList.add('hidden');
     document.getElementById('new-point-id').innerText = `#${getNextPointNumber()}`;
-    
+    document.getElementById('revisat').checked = false;
     document.getElementById('codi').value = '';
     document.getElementById('tipus').value = '';
     document.getElementById('notes').value = '';
-    
     document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
     document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
-    
-    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
-    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
+    currentPhotosFiles=[];
+    document.getElementById('photo-preview-container').innerHTML='';
+    document.getElementById('photo-preview-container').classList.add('hidden');
     document.getElementById('photo-status').innerText = "Sense fotos noves";
-
     backdrop.classList.remove('hidden');
     setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
 }
 
 function editPoint(id) {
-    const feature = savedPoints.find(f => f.id === id);
-    if (!feature) return;
-
-    editingPointId = id; 
+    const f = savedPoints.find(feat => feat.id === id);
+    if (!f) return;
+    editingPointId = id;
     document.getElementById('form-title-text').innerText = "Editar Punt";
-    document.getElementById('btn-save-text').innerText = "Actualitzar Punt";
-    document.getElementById('form-info-gps').classList.add('hidden');
-    
-    currentLon = feature.geometry.coordinates[0];
-    currentLat = feature.geometry.coordinates[1];
-    const utm = wgs84ToUtm31(currentLon, currentLat);
-    document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
-    document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
-    if (userMarker) userMarker.setLatLng([currentLat, currentLon]); 
-
-    document.getElementById('new-point-id').innerText = `#${feature.properties.num_punt}`;
-    document.getElementById('codi').value = feature.properties.codi || '';
-    document.getElementById('tipus').value = feature.properties.tipus || '';
-    document.getElementById('notes').value = feature.properties.notes || '';
-
-    document.querySelectorAll('input[name="estat"]').forEach(r=>r.checked=false);
-    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
-    if (feature.properties.estat) {
-        const radio = document.querySelector(`input[name="estat"][value="${feature.properties.estat}"]`);
-        if (radio) { radio.checked = true; updateEstat(radio); }
+    document.getElementById('btn-delete-point').classList.remove('hidden');
+    document.getElementById('new-point-id').innerText = `#${f.properties.num_punt}`;
+    document.getElementById('revisat').checked = f.properties.revisat || false;
+    document.getElementById('codi').value = f.properties.codi || '';
+    document.getElementById('tipus').value = f.properties.tipus || '';
+    document.getElementById('notes').value = f.properties.notes || '';
+    if (f.properties.estat) {
+        const r = document.querySelector(`input[name="estat"][value="${f.properties.estat}"]`);
+        if (r) { r.checked = true; updateEstat(r); }
     }
-
-    previewUrls.forEach(u=>URL.revokeObjectURL(u)); previewUrls=[]; currentPhotosFiles=[];
-    const pc=document.getElementById('photo-preview-container'); pc.innerHTML=''; pc.classList.add('hidden');
-    document.getElementById('photo-status').innerText = "Sense fotos noves";
-    
-    const fotosPrevies = feature.properties.n_fotos || 0;
-    document.getElementById('edit-photo-info').innerText = fotosPrevies > 0 ? `(Ja té ${fotosPrevies} fotos anteriors)` : "";
-
+    currentPhotosFiles=[];
+    document.getElementById('photo-preview-container').innerHTML='';
+    document.getElementById('photo-preview-container').classList.add('hidden');
+    document.getElementById('edit-photo-info').innerText = f.properties.n_fotos > 0 ? `(${f.properties.n_fotos} prev.)` : "";
     map.closePopup();
     backdrop.classList.remove('hidden');
     setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+    lucide.createIcons();
 }
+
+function deletePointById(id) {
+    if(confirm("Eliminar punt?")) {
+        savedPoints = savedPoints.filter(f => f.id !== id);
+        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+        refreshMapMarkers();
+        closeAllPanels();
+    }
+}
+
+function deleteCurrentPoint() { if(editingPointId) deletePointById(editingPointId); }
 
 function openToolsPanel() {
     document.getElementById('custom-start-num').value = getNextPointNumber();
@@ -453,36 +369,26 @@ function closeAllPanels() {
 }
 
 function updateEstat(radio) {
-    document.querySelectorAll('[id^=estat-]').forEach(l=>
-        l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
-    const colors={bo:['ring-green-400','bg-green-50'],regular:['ring-yellow-400','bg-yellow-50'],dolent:['ring-red-400','bg-red-50']};
+    document.querySelectorAll('[id^=estat-]').forEach(l=>l.classList.remove('ring-2','ring-offset-1','ring-green-400','ring-yellow-400','ring-red-400','bg-green-50','bg-yellow-50','bg-red-50'));
+    const c={bo:['ring-green-400','bg-green-50'],regular:['ring-yellow-400','bg-yellow-50'],dolent:['ring-red-400','bg-red-50']};
     const lbl = document.getElementById(`estat-${radio.value}-label`);
-    if(lbl && colors[radio.value]) lbl.classList.add('ring-2','ring-offset-1',...colors[radio.value]);
+    if(lbl && c[radio.value]) lbl.classList.add('ring-2','ring-offset-1',...c[radio.value]);
 }
 
-function showNotification(msg, isError=false, isInfo=false) {
-    const area  = document.getElementById('notification-area');
-    const notif = document.createElement('div');
-    notif.className = `notification ${isError?'error':''} ${isInfo?'info':''}`;
-    notif.innerText = msg;
-    area.appendChild(notif);
-    setTimeout(()=>{ notif.style.opacity='0'; setTimeout(()=>notif.remove(),500); }, 3500);
+function showNotification(msg, isError=false) {
+    const area = document.getElementById('notification-area');
+    const n = document.createElement('div');
+    n.className = `notification ${isError?'error':''}`;
+    n.innerText = msg;
+    area.appendChild(n);
+    setTimeout(()=>{ n.style.opacity='0'; setTimeout(()=>n.remove(),500); }, 3000);
 }
 
-// ─── Mapa ──────────────────────────────────────────────────────
 function initMap() {
     map = L.map('map',{zoomControl:false}).setView([41.7286,1.8201],14);
     L.control.zoom({position:'topright'}).addTo(map);
-    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'&copy; Esri'});
-    const esriSat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'&copy; Esri'});
-    esriStreet.addTo(map);
-    L.control.layers({"Carrers":esriStreet,"Satèl·lit":esriSat},{},{position:'topright'}).addTo(map);
-    
-    map.on('click',e=>{ 
-        updatePosition(e.latlng.lat,e.latlng.lng); 
-        showNotification("📍 Ubicació actualitzada.",false,true); 
-    });
-    
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+    map.on('click',e=>updatePosition(e.latlng.lat,e.latlng.lng));
     loadSavedPoints();
     locateUser();
 }
@@ -492,228 +398,135 @@ function updatePosition(lat, lon) {
     const utm = wgs84ToUtm31(lon, lat);
     document.getElementById('lat-display').innerText = utm.x.toFixed(2)+' m';
     document.getElementById('lon-display').innerText = utm.y.toFixed(2)+' m';
-    const ll = [lat,lon];
-    if (userMarker) userMarker.setLatLng(ll);
-    else userMarker = L.marker(ll,{icon:L.divIcon({className:'',html:"<div style='background:#3b82f6;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 4px rgba(59,130,246,0.3);'></div>",iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:1000}).addTo(map);
+    if (userMarker) userMarker.setLatLng([lat,lon]);
+    else userMarker = L.marker([lat,lon],{icon:L.divIcon({className:'',html:"<div style='background:#3b82f6;width:14px;height:14px;border-radius:50%;border:2px solid white;'></div>",iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);
 }
 
 function locateUser() {
     if(!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-        p=>{ 
-            updatePosition(p.coords.latitude,p.coords.longitude); 
-            map.flyTo([p.coords.latitude,p.coords.longitude],17); 
-        },
-        null, {enableHighAccuracy:true,timeout:12000}
-    );
+    navigator.geolocation.getCurrentPosition(p=>{ updatePosition(p.coords.latitude,p.coords.longitude); map.flyTo([p.coords.latitude,p.coords.longitude],17); }, null, {enableHighAccuracy:true});
 }
 
-// ─── Fotos ───────────────────
 async function handlePhoto(event) {
     const files = event.target.files;
-    if (!files || !files.length) return;
-    const MAX_WIDTH=1600, MAX_FOTOS=5;
-    const previewContainer = document.getElementById('photo-preview-container');
-    previewContainer.classList.remove('hidden');
-
-    for (let i=0; i<Math.min(files.length, MAX_FOTOS); i++) {
-        const file = files[i];
-        currentPhotosFiles.push(file);
-        const prevUrl = URL.createObjectURL(file);
-        previewUrls.push(prevUrl);
-        const imgEl = document.createElement('img');
-        imgEl.src = prevUrl;
-        imgEl.className = "rounded-lg max-h-28 object-cover w-full border border-gray-200";
-        previewContainer.appendChild(imgEl);
+    if (!files.length) return;
+    const pc=document.getElementById('photo-preview-container');
+    pc.classList.remove('hidden');
+    for (let f of files) {
+        currentPhotosFiles.push(f);
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(f);
+        img.className = "rounded-lg max-h-24 object-cover w-full border";
+        pc.appendChild(img);
     }
-    document.getElementById('photo-status').innerText = `${currentPhotosFiles.length} foto/es nova/es preparada/es ✓`;
-    event.target.value = ''; // Reseteja l'input perquè puguis anar afegint fotos poc a poc
+    document.getElementById('photo-status').innerText = `${currentPhotosFiles.length} fotos noves ✓`;
+    event.target.value = '';
 }
 
-// ─── Guardar ─────────────────────────────────────────────
 async function savePoint() {
-    if (currentLat===null) { showNotification("Espera GPS.",true); return; }
-    
-    const notes  = document.getElementById('notes').value.trim();
-    const codi   = document.getElementById('codi').value.trim();
-    const tipus  = document.getElementById('tipus').value;
+    if (currentLat===null) { showNotification("GPS?",true); return; }
+    const isEdit = editingPointId !== null;
+    const revisat = document.getElementById('revisat').checked;
     const estatR = document.querySelector('input[name="estat"]:checked');
-    const estat  = estatR ? estatR.value : '';
     
-    const isEditing = editingPointId !== null;
-    let feat = isEditing ? savedPoints.find(f => f.id === editingPointId) : null;
-    let numPunt = isEditing ? feat.properties.num_punt : getNextPointNumber();
+    let f = isEdit ? savedPoints.find(feat => feat.id === editingPointId) : {
+        type:"Feature", id:Date.now().toString(),
+        geometry:{type:"Point",coordinates:[currentLon, currentLat]},
+        properties:{ num_punt:getNextPointNumber(), n_fotos:0, foto_urls:[], foto_ids:[] }
+    };
 
-    if (isEditing) {
-        feat.geometry.coordinates = [currentLon, currentLat];
-        feat.properties.codi = codi;
-        feat.properties.tipus = tipus;
-        feat.properties.estat = estat;
-        feat.properties.notes = notes;
-    } else {
-        feat = {
-            type:"Feature", id:Date.now().toString(),
-            geometry:{type:"Point",coordinates:[currentLon, currentLat]},
-            properties:{
-                num_punt: numPunt, codi:codi, tipus:tipus, estat:estat,
-                notes:notes, data_hora:new Date().toISOString(),
-                n_fotos:0, foto_urls:[], foto_ids:[]
-            }
-        };
-        savedPoints.push(feat);
-    }
+    f.geometry.coordinates = [currentLon, currentLat];
+    f.properties.revisat = revisat;
+    f.properties.codi = document.getElementById('codi').value.trim();
+    f.properties.tipus = document.getElementById('tipus').value;
+    f.properties.estat = estatR ? estatR.value : '';
+    f.properties.notes = document.getElementById('notes').value.trim();
+    f.properties.data_hora = new Date().toISOString();
+
+    if (!isEdit) savedPoints.push(f);
 
     if (currentPhotosFiles.length > 0) {
-        showNotification("📤 Pujant fotos...",false,true);
+        showNotification("📤 Pujant...");
         for (let i=0; i<currentPhotosFiles.length; i++) {
-            const r = await uploadPhotoToTelegram(currentPhotosFiles[i], numPunt, feat.properties.n_fotos + 1);
-            if (r) {
-                feat.properties.foto_urls.push(r.fileUrl);
-                feat.properties.foto_ids.push(r.fileId);
-                feat.properties.n_fotos++;
-            }
+            const r = await uploadPhotoToTelegram(currentPhotosFiles[i], f.properties.num_punt, f.properties.n_fotos + 1);
+            if (r) { f.properties.foto_urls.push(r.fileUrl); f.properties.foto_ids.push(r.fileId); f.properties.n_fotos++; }
         }
     }
-
     localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
-    refreshMapMarkers();
-    closeAllPanels();
-    showNotification("✅ Punt guardat!");
+    refreshMapMarkers(); closeAllPanels();
 }
 
-// ─── Marcadors ────────────────────────────────────────
 function refreshMapMarkers() {
     map.eachLayer(l => { if (l instanceof L.Marker && l !== userMarker) map.removeLayer(l); });
-    savedPoints.forEach(f => addMarkerToMap(f));
+    savedPoints.forEach(f => {
+        const props = f.properties;
+        // COLOR LÒGICA: Blau si revisat, sinó el color de l'estat
+        const color = props.revisat ? '#3b82f6' : ({bo:'#22c55e',regular:'#f59e0b',dolent:'#ef4444'}[props.estat] || '#9ca3af');
+        const icon = L.divIcon({className:'',html:`<div style="background:${color};width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,.3);"></div>`,iconSize:[18,18],iconAnchor:[9,18]});
+        const m = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]],{icon}).addTo(map);
+        
+        let h = `<div class="popup-content"><div class="popup-id">#${props.num_punt} ${props.revisat?'(REVISAT)':''}</div>`;
+        if(props.notes) h += `<div class="popup-row">${props.notes}</div>`;
+        if(props.foto_urls?.length) h += `<img src="${props.foto_urls[0]}" onerror="refreshTelegramImage(this,'${props.foto_ids[0]}')" style="width:100%;border-radius:4px;margin-top:5px;">`;
+        h += `<div style="text-align:right;margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
+                <button onclick="deletePointById('${f.id}')" style="background:#ef4444;color:white;padding:5px;border-radius:5px;"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                <button onclick="editPoint('${f.id}')" style="background:#3b82f6;color:white;padding:5px 10px;border-radius:5px;font-weight:bold;">✏️ Edita</button>
+              </div></div>`;
+        m.bindPopup(h).on('popupopen',()=>lucide.createIcons());
+    });
     document.getElementById('points-count').innerText=savedPoints.length;
 }
 
-function addMarkerToMap(feature) {
-    const props = feature.properties;
-    const color = {'bo':'#22c55e','regular':'#f59e0b','dolent':'#ef4444'}[props.estat] || '#3b82f6';
-    const icon = L.divIcon({className:'',html:`<div style="background:${color};width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,.35);"></div>`,iconSize:[18,18],iconAnchor:[9,18]});
-    const marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]],{icon}).addTo(map);
-    
-    let html = `<div class="popup-content"><div class="popup-id">Punt #${props.num_punt}</div>`;
-    if(props.notes) html += `<div class="popup-row"><b>Notes:</b> ${props.notes}</div>`;
-    
-    const urls = props.foto_urls || [];
-    const ids = props.foto_ids || [];
-    if(urls.length > 0) {
-        html += `<img src="${urls[0]}" onerror="refreshTelegramImage(this, '${ids[0]}')" style="width:100%;border-radius:4px;margin-top:5px;">`;
-    }
-
-    html += `<div style="text-align:right;margin-top:10px;"><button onclick="editPoint('${feature.id}')" style="background:#3b82f6;color:white;padding:5px 10px;border-radius:5px;font-size:12px;">✏️ Edita</button></div></div>`;
-    marker.bindPopup(html);
-}
-
 function loadSavedPoints() {
-    const stored = localStorage.getItem('inspeccions_qgis');
-    if(stored) { savedPoints=JSON.parse(stored); refreshMapMarkers(); }
+    const s = localStorage.getItem('inspeccions_qgis');
+    if(s) { savedPoints=JSON.parse(s); refreshMapMarkers(); }
 }
-
-// ─── EXPORTACIÓ CORREGIDA (IDs Numèrics i EPSG:25831) ──────────────────
 
 function buildGeoJSONExport(features) {
-    return {
-        "type": "FeatureCollection",
-        "name": "Inspeccions_Camp",
-        "crs": {
-            "type": "name",
-            "properties": { "name": "EPSG:25831" }
-        },
-        "features": features
-    };
+    return { "type": "FeatureCollection", "crs": { "type": "name", "properties": { "name": "EPSG:25831" } }, "features": features };
 }
 
 function exportGeoJSONonly() {
     if(!savedPoints.length) return;
     const feats = JSON.parse(JSON.stringify(savedPoints));
-    const baseUrl = window.location.origin + window.location.pathname; 
-
-    feats.forEach((f, index) => {
-        f.id = parseInt(f.properties.num_punt) || (index + 1);
+    feats.forEach((f, i) => {
+        f.id = parseInt(f.properties.num_punt) || (i + 1);
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
-
-        const urls = f.properties.foto_urls || [];
-        const ids = f.properties.foto_ids || [];
-        f.properties.foto_urls = urls.join('|'); 
-        f.properties.foto_ids = ids.join('|');
-        f.properties.arxius_fotos = urls.join('|');
-        f.properties.enllac_visor = urls.length > 0 ? `${baseUrl}?view_img=${encodeURIComponent(urls[0])}&file_id=${ids[0]||''}` : '';
+        f.properties.foto_urls = f.properties.foto_urls.join('|');
+        f.properties.foto_ids = f.properties.foto_ids.join('|');
     });
-
-    downloadFile(JSON.stringify(buildGeoJSONExport(feats),null,2), `inspeccions_${dateStr()}.geojson`, 'application/geo+json');
-    closeAllPanels();
+    const b = new Blob([JSON.stringify(buildGeoJSONExport(feats),null,2)],{type:'application/geo+json'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`insp_${new Date().getTime()}.geojson`; a.click();
 }
 
 async function exportDataAsZip() {
     if(!savedPoints.length) return;
     const zip = new JSZip();
     const feats = JSON.parse(JSON.stringify(savedPoints));
-    const baseUrl = window.location.origin + window.location.pathname; 
-
-    feats.forEach((f, index) => {
-        f.id = parseInt(f.properties.num_punt) || (index + 1);
+    feats.forEach((f, i) => {
+        f.id = parseInt(f.properties.num_punt) || (i + 1);
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
-
-        const urls = f.properties.foto_urls || [];
-        const ids = f.properties.foto_ids || [];
-        f.properties.foto_urls = urls.join('|'); 
-        f.properties.foto_ids = ids.join('|');
-        f.properties.arxius_fotos = urls.join('|');
-        f.properties.enllac_visor = urls.length > 0 ? `${baseUrl}?view_img=${encodeURIComponent(urls[0])}&file_id=${ids[0]||''}` : '';
+        f.properties.foto_urls = f.properties.foto_urls.join('|');
     });
-
-    zip.file("mapa_inspeccions.geojson", JSON.stringify(buildGeoJSONExport(feats),null,2));
-    const content = await zip.generateAsync({type:"blob"});
-    downloadBlob(content, `inspeccions_${dateStr()}.zip`);
-    closeAllPanels();
-}
-
-// ─── Auxiliars ───────────────────
-function dateStr(){ return new Date().toISOString().slice(0,10).replace(/-/g,''); }
-function downloadFile(c,f,m){ downloadBlob(new Blob([c],{type:m}),f); }
-function downloadBlob(b,f){
-    const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=f;
-    document.body.appendChild(a); a.click(); a.remove();
-}
-
-function importGeoJSON(e) {
-    const file=e.target.files[0]; if(!file) return;
-    const reader=new FileReader();
-    reader.onload=function(ev){
-        try {
-            const gj=JSON.parse(ev.target.result);
-            const features=gj.features || [gj];
-            features.forEach(f => { if(!f.id) f.id=Date.now().toString()+Math.random(); savedPoints.push(f); });
-            localStorage.setItem('inspeccions_qgis',JSON.stringify(savedPoints));
-            refreshMapMarkers();
-            showNotification("✅ Importat!");
-        } catch(err){ showNotification("Error format.",true); }
-    };
-    reader.readAsText(file);
+    zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats)));
+    const c = await zip.generateAsync({type:"blob"});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(c); a.download=`insp_${new Date().getTime()}.zip`; a.click();
 }
 
 function clearData() { if(confirm("Segur?")) { localStorage.removeItem('inspeccions_qgis'); location.reload(); } }
 
 window.onload = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewImg = urlParams.get('view_img');
-    const fileId = urlParams.get('file_id') || '';
-    
-    if (viewImg) {
-        document.body.innerHTML = `
-            <div style="background:#111;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-                <img src="${viewImg}" onerror="refreshTelegramImage(this, '${fileId}')" style="max-width:100%;max-height:80vh;border-radius:8px;">
-                <div style="margin-top:20px;"><a href="${window.location.pathname}" style="padding:10px 20px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;font-weight:bold;">Tornar a l'App</a></div>
-            </div>`;
-        return; 
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('view_img')) {
+        document.body.innerHTML = `<div style="background:#111;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+            <img src="${p.get('view_img')}" onerror="refreshTelegramImage(this,'${p.get('file_id')}')" style="max-width:100%;max-height:80vh;border-radius:8px;">
+            <a href="${window.location.pathname}" style="margin-top:20px;padding:10px 20px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">Tornar</a>
+        </div>`;
+        return;
     }
-    initMap();
-    if (!TG_TOKEN) setTimeout(()=>openTelegramModal(), 600);
+    initMap(); if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
 };
 </script>
 </body>
