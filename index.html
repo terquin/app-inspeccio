@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inspecció de Camp</title>
@@ -263,145 +264,6 @@ let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 // ─────────────────────────────────────────────────────────────
 // Helpers per escriure EXIF GPS manualment al JPEG
 // ─────────────────────────────────────────────────────────────
-function makeExifGps(lat, lon) {
-    // Converteix a graus, minuts, segons amb alta precisió
-    function toDMS(val) {
-        val = Math.abs(val);
-        const deg = Math.floor(val);
-        const minFloat = (val - deg) * 60;
-        const min = Math.floor(minFloat);
-        const secFloat = (minFloat - min) * 60;
-        // Guardem els segons com a fracció: numerador entero / 10000
-        const secNum = Math.round(secFloat * 10000);
-        return [deg, min, secNum, 10000];
-    }
-
-    // Escriu un enter de 16 bits big-endian
-    function u16(v) {
-        return [(v >>> 8) & 0xFF, v & 0xFF];
-    }
-
-    // Escriu un enter de 32 bits big-endian (usa >>> per evitar signe)
-    function u32(v) {
-        v = v >>> 0; // força unsigned 32-bit
-        return [
-            (v >>> 24) & 0xFF,
-            (v >>> 16) & 0xFF,
-            (v >>>  8) & 0xFF,
-             v         & 0xFF
-        ];
-    }
-
-    // Escriu un racional EXIF: numerador/denominador, 8 bytes
-    function rat(num, den) {
-        return [...u32(num >>> 0), ...u32(den >>> 0)];
-    }
-
-    const [latDeg, latMin, latSecNum, latSecDen] = toDMS(lat);
-    const [lonDeg, lonMin, lonSecNum, lonSecDen] = toDMS(lon);
-
-    const latRef = lat >= 0 ? 0x4E : 0x53; // 'N' / 'S'
-    const lonRef = lon >= 0 ? 0x45 : 0x57; // 'E' / 'W'
-
-    // Layout del bloc TIFF (tots els offsets relatius al byte 0 del TIFF header):
-    //   0 -  7 : TIFF header (8 bytes)
-    //   8 - 25 : IFD0 → count(2) + 1 entrada(12) + nextIFD(4) = 18 bytes
-    //  26 -103 : GPS IFD → count(2) + 6 entrades×12 + nextIFD(4) = 78 bytes
-    // 104 -127 : dades racionals Latitud  (3 × 8 bytes = 24 bytes)
-    // 128 -151 : dades racionals Longitud (3 × 8 bytes = 24 bytes)
-
-    const GPS_IFD_OFF = 26;
-    const LAT_DATA_OFF = 104;
-    const LON_DATA_OFF = 128;
-
-    const gpsIFD = [
-        ...u16(6),  // nombre d'entrades
-
-        // Tag 0x0000  GPSVersionID  BYTE[4]  valor inline: 2.3.0.0
-        ...u16(0x0000), ...u16(1), ...u32(4),
-        0x02, 0x03, 0x00, 0x00,
-
-        // Tag 0x0001  GPSLatitudeRef  ASCII[2]  inline: 'N' o 'S'
-        ...u16(0x0001), ...u16(2), ...u32(2),
-        latRef, 0x00, 0x00, 0x00,
-
-        // Tag 0x0002  GPSLatitude  RATIONAL[3]  offset → LAT_DATA_OFF
-        ...u16(0x0002), ...u16(5), ...u32(3),
-        ...u32(LAT_DATA_OFF),
-
-        // Tag 0x0003  GPSLongitudeRef  ASCII[2]  inline: 'E' o 'W'
-        ...u16(0x0003), ...u16(2), ...u32(2),
-        lonRef, 0x00, 0x00, 0x00,
-
-        // Tag 0x0004  GPSLongitude  RATIONAL[3]  offset → LON_DATA_OFF
-        ...u16(0x0004), ...u16(5), ...u32(3),
-        ...u32(LON_DATA_OFF),
-
-        // Tag 0x0012  GPSMapDatum  ASCII[7]  "WGS-84\0" cap als 8 bytes inline
-        ...u16(0x0012), ...u16(2), ...u32(7),
-        0x57, 0x47, 0x53, 0x2D, 0x38, 0x34, 0x00, 0x00,
-
-        // nextIFD = 0
-        0x00, 0x00, 0x00, 0x00,
-
-        // Dades Latitud:  deg/1  min/1  sec/10000
-        ...rat(latDeg, 1), ...rat(latMin, 1), ...rat(latSecNum, latSecDen),
-
-        // Dades Longitud: deg/1  min/1  sec/10000
-        ...rat(lonDeg, 1), ...rat(lonMin, 1), ...rat(lonSecNum, lonSecDen),
-    ];
-
-    // IFD0: apunta el GPS IFD
-    const ifd0 = [
-        ...u16(1),
-        ...u16(0x8825), ...u16(4), ...u32(1), ...u32(GPS_IFD_OFF),
-        0x00, 0x00, 0x00, 0x00,
-    ];
-
-    // TIFF header big-endian: "MM" + 42 + offset_IFD0=8
-    const tiffHeader = [0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08];
-
-    const exifBody = [
-        0x45, 0x78, 0x69, 0x66, 0x00, 0x00, // "Exif\0\0"
-        ...tiffHeader,
-        ...ifd0,
-        ...gpsIFD,
-    ];
-
-    const app1Len = 2 + exifBody.length;
-    return new Uint8Array([
-        0xFF, 0xE1,
-        (app1Len >>> 8) & 0xFF,
-        app1Len & 0xFF,
-        ...exifBody
-    ]);
-}
-
-function injectExifIntoJpeg(jpegBlob, lat, lon) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const orig = new Uint8Array(e.target.result);
-            if (orig[0] !== 0xFF || orig[1] !== 0xD8) { resolve(jpegBlob); return; }
-
-            const exifApp1 = makeExifGps(lat, lon);
-
-            // Saltem qualsevol APP1 ja existent (FF E1)
-            let restStart = 2;
-            if (orig[2] === 0xFF && orig[3] === 0xE1) {
-                restStart = 2 + 2 + ((orig[4] << 8) | orig[5]);
-            }
-
-            const merged = new Uint8Array(2 + exifApp1.length + orig.length - restStart);
-            merged.set([0xFF,0xD8], 0);
-            merged.set(exifApp1, 2);
-            merged.set(orig.slice(restStart), 2 + exifApp1.length);
-            resolve(new Blob([merged], { type: 'image/jpeg' }));
-        };
-        reader.readAsArrayBuffer(jpegBlob);
-    });
-}
-
 function compressImage(file, quality, maxDim) {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -411,22 +273,58 @@ function compressImage(file, quality, maxDim) {
             let { width, height } = img;
             if (width > maxDim || height > maxDim) {
                 if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-                else                { width  = Math.round(width  * maxDim / height); height = maxDim; }
+                else                { width = Math.round(width * maxDim / height); height = maxDim; }
             }
             const canvas = document.createElement('canvas');
             canvas.width = width; canvas.height = height;
             canvas.getContext('2d').drawImage(img, 0, 0, width, height);
             canvas.toBlob(blob => {
                 canvas.width = 1; canvas.height = 1;
-                if (blob) {
-                    if (currentLat !== null && currentLon !== null) {
-                        injectExifIntoJpeg(blob, currentLat, currentLon).then(resolve).catch(() => resolve(blob));
-                    } else {
-                        resolve(blob);
+                if (!blob) { reject(new Error('toBlob failed')); return; }
+
+                if (currentLat === null || currentLon === null) { resolve(blob); return; }
+
+                // Injecta GPS amb piexifjs
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const dataUrl = e.target.result; // "data:image/jpeg;base64,..."
+
+                        // Llegim l'EXIF existent (si n'hi ha) per no perdre'l
+                        let exifObj = { GPS: {} };
+                        try { exifObj = piexif.load(dataUrl); } catch(ex) { exifObj = { GPS: {} }; }
+
+                        // Funció per convertir decimal a [graus, minuts, segons] com a racionals
+                        function toRat(val) {
+                            val = Math.abs(val);
+                            const deg = Math.floor(val);
+                            const minF = (val - deg) * 60;
+                            const min = Math.floor(minF);
+                            const secF = (minF - min) * 60;
+                            const secNum = Math.round(secF * 10000);
+                            return [[deg, 1], [min, 1], [secNum, 10000]];
+                        }
+
+                        exifObj.GPS[piexif.GPSIFD.GPSLatitudeRef]  = currentLat >= 0 ? 'N' : 'S';
+                        exifObj.GPS[piexif.GPSIFD.GPSLatitude]      = toRat(currentLat);
+                        exifObj.GPS[piexif.GPSIFD.GPSLongitudeRef] = currentLon >= 0 ? 'E' : 'W';
+                        exifObj.GPS[piexif.GPSIFD.GPSLongitude]     = toRat(currentLon);
+                        exifObj.GPS[piexif.GPSIFD.GPSMapDatum]      = 'WGS-84';
+
+                        const exifBytes = piexif.dump(exifObj);
+                        const newDataUrl = piexif.insert(exifBytes, dataUrl);
+
+                        // Convertim dataUrl → Blob
+                        const bin = atob(newDataUrl.split(',')[1]);
+                        const arr = new Uint8Array(bin.length);
+                        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                        resolve(new Blob([arr], { type: 'image/jpeg' }));
+                    } catch (err) {
+                        console.warn('EXIF inject error:', err);
+                        resolve(blob); // fallback sense GPS
                     }
-                } else {
-                    reject(new Error('toBlob failed'));
-                }
+                };
+                reader.readAsDataURL(blob);
             }, 'image/jpeg', quality);
         };
         img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load error')); };
