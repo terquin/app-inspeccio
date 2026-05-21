@@ -260,29 +260,106 @@ let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 // Redimensiona a màx. 1600px i comprimeix a JPEG amb la qualitat triada.
 // Allibera la memòria de l'objecte URL i de l'img temporal just després.
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Helpers per escriure EXIF GPS manualment al JPEG
+// ─────────────────────────────────────────────────────────────
+function makeExifGps(lat, lon) {
+    function toRational(val) {
+        val = Math.abs(val);
+        const deg = Math.floor(val);
+        const minFloat = (val - deg) * 60;
+        const min = Math.floor(minFloat);
+        const sec = Math.round((minFloat - min) * 60 * 100);
+        return { deg, min, secNum: sec, secDen: 100 };
+    }
+    function writeUint16(v) { return [(v >> 8) & 0xFF, v & 0xFF]; }
+    function writeUint32(v) { return [(v >> 24)&0xFF,(v >> 16)&0xFF,(v >> 8)&0xFF, v & 0xFF]; }
+    function writeRational(num, den) { return [...writeUint32(num), ...writeUint32(den)]; }
+
+    const latR = toRational(lat);
+    const lonR = toRational(lon);
+    const latRef = lat >= 0 ? 0x4E : 0x53;
+    const lonRef = lon >= 0 ? 0x45 : 0x57;
+
+    const NUM_ENTRIES = 6;
+    const IFD0_SIZE   = 2 + 1 * 12 + 4;
+    const TIFF_HEADER_SIZE = 8;
+    const GPS_IFD_OFFSET   = TIFF_HEADER_SIZE + IFD0_SIZE; // = 26
+    const DATA_OFFSET      = 2 + NUM_ENTRIES * 12 + 4;
+    const gpsLatDataAbsOff = GPS_IFD_OFFSET + DATA_OFFSET;
+    const gpsLonDataAbsOff = gpsLatDataAbsOff + 24;
+
+    const gpsIFD = [
+        ...writeUint16(NUM_ENTRIES),
+        ...writeUint16(0x0000), ...writeUint16(1),  ...writeUint32(4), 0x02,0x03,0x00,0x00,
+        ...writeUint16(0x0001), ...writeUint16(2),  ...writeUint32(2), latRef,0x00,0x00,0x00,
+        ...writeUint16(0x0002), ...writeUint16(5),  ...writeUint32(3), ...writeUint32(gpsLatDataAbsOff),
+        ...writeUint16(0x0003), ...writeUint16(2),  ...writeUint32(2), lonRef,0x00,0x00,0x00,
+        ...writeUint16(0x0004), ...writeUint16(5),  ...writeUint32(3), ...writeUint32(gpsLonDataAbsOff),
+        ...writeUint16(0x0012), ...writeUint16(2),  ...writeUint32(7),
+            0x57,0x47,0x53,0x2D,0x38,0x34,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        ...writeRational(latR.deg, 1), ...writeRational(latR.min, 1), ...writeRational(latR.secNum, latR.secDen),
+        ...writeRational(lonR.deg, 1), ...writeRational(lonR.min, 1), ...writeRational(lonR.secNum, lonR.secDen),
+    ];
+    const ifd0 = [
+        ...writeUint16(1),
+        ...writeUint16(0x8825), ...writeUint16(4), ...writeUint32(1), ...writeUint32(GPS_IFD_OFFSET),
+        0x00,0x00,0x00,0x00,
+    ];
+    const tiffHeader = [0x4D,0x4D, 0x00,0x2A, 0x00,0x00,0x00,0x08];
+    const exifBody   = [0x45,0x78,0x69,0x66,0x00,0x00, ...tiffHeader, ...ifd0, ...gpsIFD];
+    const app1Length = 2 + exifBody.length;
+    return new Uint8Array([0xFF,0xE1, (app1Length>>8)&0xFF, app1Length&0xFF, ...exifBody]);
+}
+
+function injectExifIntoJpeg(jpegBlob, lat, lon) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const orig = new Uint8Array(e.target.result);
+            if (orig[0] !== 0xFF || orig[1] !== 0xD8) { resolve(jpegBlob); return; }
+            const exifApp1 = makeExifGps(lat, lon);
+            let restStart = 2;
+            if (orig[2] === 0xFF && orig[3] === 0xE1) {
+                const existingLen = (orig[4] << 8) | orig[5];
+                restStart = 2 + 2 + existingLen;
+            }
+            const merged = new Uint8Array(2 + exifApp1.length + (orig.length - restStart));
+            merged.set([0xFF, 0xD8], 0);
+            merged.set(exifApp1, 2);
+            merged.set(orig.slice(restStart), 2 + exifApp1.length);
+            resolve(new Blob([merged], { type: 'image/jpeg' }));
+        };
+        reader.readAsArrayBuffer(jpegBlob);
+    });
+}
+
 function compressImage(file, quality, maxDim) {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
         const img = new Image();
         img.onload = () => {
-            URL.revokeObjectURL(url); // allibera memòria immediatament
-
+            URL.revokeObjectURL(url);
             let { width, height } = img;
             if (width > maxDim || height > maxDim) {
                 if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
                 else                { width  = Math.round(width  * maxDim / height); height = maxDim; }
             }
-
             const canvas = document.createElement('canvas');
             canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
             canvas.toBlob(blob => {
-                // Neteja el canvas per alliberar memòria de GPU/CPU
                 canvas.width = 1; canvas.height = 1;
-                if (blob) resolve(blob);
-                else reject(new Error('toBlob failed'));
+                if (blob) {
+                    if (currentLat !== null && currentLon !== null) {
+                        injectExifIntoJpeg(blob, currentLat, currentLon).then(resolve).catch(() => resolve(blob));
+                    } else {
+                        resolve(blob);
+                    }
+                } else {
+                    reject(new Error('toBlob failed'));
+                }
             }, 'image/jpeg', quality);
         };
         img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load error')); };
