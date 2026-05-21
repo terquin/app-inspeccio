@@ -264,72 +264,117 @@ let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 // Helpers per escriure EXIF GPS manualment al JPEG
 // ─────────────────────────────────────────────────────────────
 function makeExifGps(lat, lon) {
-    function toRational(val) {
+    // Converteix a graus, minuts, segons amb alta precisió
+    function toDMS(val) {
         val = Math.abs(val);
         const deg = Math.floor(val);
         const minFloat = (val - deg) * 60;
         const min = Math.floor(minFloat);
-        const secNum = Math.round((minFloat - min) * 600000); // x10000 per precisió
-        return { deg, min, secNum, secDen: 10000 };
+        const secFloat = (minFloat - min) * 60;
+        // Guardem els segons com a fracció: numerador entero / 10000
+        const secNum = Math.round(secFloat * 10000);
+        return [deg, min, secNum, 10000];
     }
-    function u16(v) { return [(v >> 8) & 0xFF, v & 0xFF]; }
-    function u32(v) { return [(v>>>24)&0xFF,(v>>>16)&0xFF,(v>>>8)&0xFF,v&0xFF]; }
-    function rat(num, den) { return [...u32(num), ...u32(den)]; }
 
-    const latR = toRational(lat);
-    const lonR = toRational(lon);
-    const latRef = lat >= 0 ? 0x4E : 0x53; // N / S
-    const lonRef = lon >= 0 ? 0x45 : 0x57; // E / W
+    // Escriu un enter de 16 bits big-endian
+    function u16(v) {
+        return [(v >>> 8) & 0xFF, v & 0xFF];
+    }
 
-    // Estructura dins el bloc TIFF (big-endian, origen = byte 0 del TIFF header):
-    //   0..7   → TIFF header (8 bytes)
-    //   8..25  → IFD0: count(2) + 1 entrada(12) + nextIFD(4) = 18 bytes
-    //  26..N   → GPS IFD: count(2) + 6 entrades(72) + nextIFD(4) = 78 bytes
-    //  104..   → dades racionals (lat: 24B, lon: 24B)
+    // Escriu un enter de 32 bits big-endian (usa >>> per evitar signe)
+    function u32(v) {
+        v = v >>> 0; // força unsigned 32-bit
+        return [
+            (v >>> 24) & 0xFF,
+            (v >>> 16) & 0xFF,
+            (v >>>  8) & 0xFF,
+             v         & 0xFF
+        ];
+    }
 
-    const GPS_IFD_START  = 26;
-    const GPS_DATA_START = GPS_IFD_START + 2 + 6 * 12 + 4; // = 26 + 78 = 104
-    const LAT_OFF        = GPS_DATA_START;       // 104
-    const LON_OFF        = GPS_DATA_START + 24;  // 128
+    // Escriu un racional EXIF: numerador/denominador, 8 bytes
+    function rat(num, den) {
+        return [...u32(num >>> 0), ...u32(den >>> 0)];
+    }
+
+    const [latDeg, latMin, latSecNum, latSecDen] = toDMS(lat);
+    const [lonDeg, lonMin, lonSecNum, lonSecDen] = toDMS(lon);
+
+    const latRef = lat >= 0 ? 0x4E : 0x53; // 'N' / 'S'
+    const lonRef = lon >= 0 ? 0x45 : 0x57; // 'E' / 'W'
+
+    // Layout del bloc TIFF (tots els offsets relatius al byte 0 del TIFF header):
+    //   0 -  7 : TIFF header (8 bytes)
+    //   8 - 25 : IFD0 → count(2) + 1 entrada(12) + nextIFD(4) = 18 bytes
+    //  26 -103 : GPS IFD → count(2) + 6 entrades×12 + nextIFD(4) = 78 bytes
+    // 104 -127 : dades racionals Latitud  (3 × 8 bytes = 24 bytes)
+    // 128 -151 : dades racionals Longitud (3 × 8 bytes = 24 bytes)
+
+    const GPS_IFD_OFF = 26;
+    const LAT_DATA_OFF = 104;
+    const LON_DATA_OFF = 128;
 
     const gpsIFD = [
-        ...u16(6), // 6 entrades
-        // 0x0000 GPSVersionID  - BYTE[4] inline
-        ...u16(0x0000),...u16(1),...u32(4), 0x02,0x03,0x00,0x00,
-        // 0x0001 GPSLatitudeRef - ASCII[2] inline  ('N' o 'S')
-        ...u16(0x0001),...u16(2),...u32(2), latRef,0x00,0x00,0x00,
-        // 0x0002 GPSLatitude    - RATIONAL[3] → offset absolut TIFF
-        ...u16(0x0002),...u16(5),...u32(3), ...u32(LAT_OFF),
-        // 0x0003 GPSLongitudeRef - ASCII[2] inline ('E' o 'W')
-        ...u16(0x0003),...u16(2),...u32(2), lonRef,0x00,0x00,0x00,
-        // 0x0004 GPSLongitude   - RATIONAL[3] → offset absolut TIFF
-        ...u16(0x0004),...u16(5),...u32(3), ...u32(LON_OFF),
-        // 0x0012 GPSMapDatum    - ASCII "WGS-84\0" (7 bytes, cap als 8 del value)
-        ...u16(0x0012),...u16(2),...u32(7), 0x57,0x47,0x53,0x2D,0x38,0x34,0x00,0x00,
+        ...u16(6),  // nombre d'entrades
+
+        // Tag 0x0000  GPSVersionID  BYTE[4]  valor inline: 2.3.0.0
+        ...u16(0x0000), ...u16(1), ...u32(4),
+        0x02, 0x03, 0x00, 0x00,
+
+        // Tag 0x0001  GPSLatitudeRef  ASCII[2]  inline: 'N' o 'S'
+        ...u16(0x0001), ...u16(2), ...u32(2),
+        latRef, 0x00, 0x00, 0x00,
+
+        // Tag 0x0002  GPSLatitude  RATIONAL[3]  offset → LAT_DATA_OFF
+        ...u16(0x0002), ...u16(5), ...u32(3),
+        ...u32(LAT_DATA_OFF),
+
+        // Tag 0x0003  GPSLongitudeRef  ASCII[2]  inline: 'E' o 'W'
+        ...u16(0x0003), ...u16(2), ...u32(2),
+        lonRef, 0x00, 0x00, 0x00,
+
+        // Tag 0x0004  GPSLongitude  RATIONAL[3]  offset → LON_DATA_OFF
+        ...u16(0x0004), ...u16(5), ...u32(3),
+        ...u32(LON_DATA_OFF),
+
+        // Tag 0x0012  GPSMapDatum  ASCII[7]  "WGS-84\0" cap als 8 bytes inline
+        ...u16(0x0012), ...u16(2), ...u32(7),
+        0x57, 0x47, 0x53, 0x2D, 0x38, 0x34, 0x00, 0x00,
+
         // nextIFD = 0
-        0x00,0x00,0x00,0x00,
-        // Dades racionals latitud
-        ...rat(latR.deg,1), ...rat(latR.min,1), ...rat(latR.secNum, latR.secDen),
-        // Dades racionals longitud
-        ...rat(lonR.deg,1), ...rat(lonR.min,1), ...rat(lonR.secNum, lonR.secDen),
+        0x00, 0x00, 0x00, 0x00,
+
+        // Dades Latitud:  deg/1  min/1  sec/10000
+        ...rat(latDeg, 1), ...rat(latMin, 1), ...rat(latSecNum, latSecDen),
+
+        // Dades Longitud: deg/1  min/1  sec/10000
+        ...rat(lonDeg, 1), ...rat(lonMin, 1), ...rat(lonSecNum, lonSecDen),
     ];
 
-    // IFD0: 1 entrada → tag 0x8825 (GPSInfoIFDPointer) apunta a GPS_IFD_START=26
+    // IFD0: apunta el GPS IFD
     const ifd0 = [
         ...u16(1),
-        ...u16(0x8825),...u16(4),...u32(1),...u32(GPS_IFD_START),
-        0x00,0x00,0x00,0x00,
+        ...u16(0x8825), ...u16(4), ...u32(1), ...u32(GPS_IFD_OFF),
+        0x00, 0x00, 0x00, 0x00,
     ];
 
-    const tiffHeader = [0x4D,0x4D, 0x00,0x2A, 0x00,0x00,0x00,0x08]; // MM + 42 + offset IFD0=8
+    // TIFF header big-endian: "MM" + 42 + offset_IFD0=8
+    const tiffHeader = [0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08];
 
     const exifBody = [
-        0x45,0x78,0x69,0x66,0x00,0x00, // "Exif\0\0"
-        ...tiffHeader, ...ifd0, ...gpsIFD
+        0x45, 0x78, 0x69, 0x66, 0x00, 0x00, // "Exif\0\0"
+        ...tiffHeader,
+        ...ifd0,
+        ...gpsIFD,
     ];
 
-    const app1Len = 2 + exifBody.length; // inclou els 2 bytes del length
-    return new Uint8Array([0xFF,0xE1, (app1Len>>8)&0xFF, app1Len&0xFF, ...exifBody]);
+    const app1Len = 2 + exifBody.length;
+    return new Uint8Array([
+        0xFF, 0xE1,
+        (app1Len >>> 8) & 0xFF,
+        app1Len & 0xFF,
+        ...exifBody
+    ]);
 }
 
 function injectExifIntoJpeg(jpegBlob, lat, lon) {
