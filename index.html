@@ -655,6 +655,11 @@ function buildGeoJSONExport(features) {
     return { "type": "FeatureCollection", "crs": { "type": "name", "properties": { "name": "EPSG:25831" } }, "features": features };
 }
 
+function buildViewerUrl(fileUrl, fileId) {
+    const base = window.location.href.split('?')[0];
+    return `${base}?view_img=${encodeURIComponent(fileUrl)}&file_id=${encodeURIComponent(fileId)}`;
+}
+
 function exportGeoJSONonly() {
     if(!savedPoints.length) return;
     const feats = JSON.parse(JSON.stringify(savedPoints));
@@ -663,12 +668,13 @@ function exportGeoJSONonly() {
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
 
-        // ✅ Un camp per foto: foto_url_1, foto_url_2, ...
-        const urls = f.properties.foto_urls || [];
+        const urls  = f.properties.foto_urls || [];
+        const ids   = f.properties.foto_ids  || [];
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
         urls.forEach((url, idx) => {
-            f.properties[`foto_url_${idx + 1}`] = url;
+            // ✅ Enllaç al visor intern, no a Telegram directament
+            f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
         });
     });
     const b = new Blob([JSON.stringify(buildGeoJSONExport(feats),null,2)],{type:'application/geo+json'});
@@ -684,12 +690,13 @@ async function exportDataAsZip() {
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
 
-        // ✅ Un camp per foto: foto_url_1, foto_url_2, ...
-        const urls = f.properties.foto_urls || [];
+        const urls  = f.properties.foto_urls || [];
+        const ids   = f.properties.foto_ids  || [];
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
         urls.forEach((url, idx) => {
-            f.properties[`foto_url_${idx + 1}`] = url;
+            // ✅ Enllaç al visor intern, no a Telegram directament
+            f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
         });
     });
     zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats)));
