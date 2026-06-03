@@ -374,14 +374,25 @@ async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     try {
         const fd = new FormData();
         fd.append('chat_id', TG_CHAT_ID);
-        fd.append('document', blob, `p${numPunt}_f${fotoIndex}.jpg`);
-        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`, {method:'POST', body:fd});
+        fd.append('photo', blob, `p${numPunt}_f${fotoIndex}.jpg`);  // ✅ 'photo' en lloc de 'document'
+        
+        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {  // ✅ sendPhoto
+            method: 'POST', body: fd
+        });
         const data = await resp.json();
         if (!data.ok) return null;
-        const fileId = data.result.document.file_id;
+
+        // sendPhoto retorna un array de mides, agafem la més gran
+        const photos = data.result.photo;
+        const biggest = photos[photos.length - 1];
+        const fileId = biggest.file_id;
+
         const fileResp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
         const fileData = await fileResp.json();
-        return { fileId, fileUrl: `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}` };
+        return { 
+            fileId, 
+            fileUrl: `https://api.telegram.org/file/bot${TG_TOKEN}/${fileData.result.file_path}` 
+        };
     } catch(err) { return null; }
 }
 
