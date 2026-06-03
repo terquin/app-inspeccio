@@ -227,6 +227,19 @@
     </div>
 </div>
 
+<!-- Modal visor de fotos -->
+<div id="photo-viewer-modal" class="fixed inset-0 z-[800] hidden items-center justify-center bg-black/90">
+    <button onclick="closePhotoViewer()" class="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 z-10">
+        <i data-lucide="x" class="w-6 h-6"></i>
+    </button>
+    <div id="photo-viewer-hint" class="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 text-xs z-10 pointer-events-none">
+        Pinça o scroll per fer zoom · Doble clic per resetar
+    </div>
+    <div id="photo-viewer-container" style="overflow:hidden;width:100%;height:100%;display:flex;align-items:center;justify-content:center;cursor:grab;">
+        <img id="photo-viewer-img" src="" style="max-width:100%;max-height:90vh;border-radius:8px;object-contain;transform-origin:center center;transition:transform 0.1s ease;user-select:none;pointer-events:none;">
+    </div>
+</div>
+
 <div id="telegram-modal" class="fixed inset-0 z-[700] hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeTelegramModalIfConfigured()"></div>
     <div class="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-md overflow-hidden">
@@ -636,7 +649,19 @@ function refreshMapMarkers() {
         
         let h = `<div class="popup-content"><div class="popup-id">#${props.num_punt} ${props.revisat?'(REVISAT)':''}</div>`;
         if(props.notes) h += `<div class="popup-row">${props.notes}</div>`;
-        if(props.foto_urls?.length) h += `<img src="${props.foto_urls[0]}" onerror="refreshTelegramImage(this,'${props.foto_ids[0]}')" style="width:100%;border-radius:4px;margin-top:5px;">`;
+       
+if(props.foto_urls?.length) {
+    h += `<div class="popup-fotos-label">${props.foto_urls.length} foto(es):</div>`;
+    props.foto_urls.forEach((url, idx) => {
+        const fid = props.foto_ids?.[idx] || '';
+        h += `<img src="${url}" 
+              onerror="refreshTelegramImage(this,'${fid}')" 
+              onclick="openPhotoViewer('${url}','${fid}')"
+              style="width:100%;border-radius:4px;margin-top:4px;cursor:pointer;" 
+              title="Clic per ampliar">`;
+    });
+}
+
         h += `<div style="text-align:right;margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
                 <button onclick="deletePointById('${f.id}')" style="background:#ef4444;color:white;padding:5px;border-radius:5px;"><i data-lucide="trash-2" style="width:14px;"></i></button>
                 <button onclick="editPoint('${f.id}')" style="background:#3b82f6;color:white;padding:5px 10px;border-radius:5px;font-weight:bold;">✏️ Edita</button>
@@ -705,6 +730,145 @@ async function exportDataAsZip() {
 }
 
 function clearData() { if(confirm("Segur?")) { localStorage.removeItem('inspeccions_qgis'); location.reload(); } }
+
+// ─────────────────────────────────────────────────────────────
+// VISOR DE FOTOS AMB ZOOM
+// ─────────────────────────────────────────────────────────────
+let viewerScale = 1, viewerMinScale = 1, viewerMaxScale = 5;
+let viewerOffsetX = 0, viewerOffsetY = 0;
+let viewerDragging = false, viewerLastX = 0, viewerLastY = 0;
+let viewerLastDist = null;
+
+function applyViewerTransform() {
+    const img = document.getElementById('photo-viewer-img');
+    img.style.transform = `translate(${viewerOffsetX}px, ${viewerOffsetY}px) scale(${viewerScale})`;
+}
+
+function clampViewerOffset() {
+    const img = document.getElementById('photo-viewer-img');
+    const maxX = (img.naturalWidth  * viewerScale - window.innerWidth)  / 2;
+    const maxY = (img.naturalHeight * viewerScale - window.innerHeight) / 2;
+    viewerOffsetX = Math.max(-Math.max(maxX,0), Math.min(Math.max(maxX,0), viewerOffsetX));
+    viewerOffsetY = Math.max(-Math.max(maxY,0), Math.min(Math.max(maxY,0), viewerOffsetY));
+}
+
+function openPhotoViewer(url, fileId) {
+    const modal = document.getElementById('photo-viewer-modal');
+    const img   = document.getElementById('photo-viewer-img');
+    viewerScale = 1; viewerOffsetX = 0; viewerOffsetY = 0;
+    img.style.transition = 'none';
+    applyViewerTransform();
+    img.src = '';
+    img.src = url;
+    img.dataset.retried = '';
+    img.onerror = () => {
+        if (fileId && !img.dataset.retried) {
+            img.dataset.retried = 'true';
+            refreshTelegramImage(img, fileId);
+        }
+    };
+    modal.classList.replace('hidden', 'flex');
+    lucide.createIcons();
+}
+
+function closePhotoViewer() {
+    document.getElementById('photo-viewer-modal').classList.replace('flex', 'hidden');
+    document.getElementById('photo-viewer-img').src = '';
+}
+
+function resetViewerZoom() {
+    viewerScale = 1; viewerOffsetX = 0; viewerOffsetY = 0;
+    const img = document.getElementById('photo-viewer-img');
+    img.style.transition = 'transform 0.2s ease';
+    applyViewerTransform();
+    setTimeout(() => img.style.transition = 'none', 200);
+}
+
+// ── Scroll (ordinador) ──
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('photo-viewer-container');
+    if (!container) return;
+
+    container.addEventListener('wheel', e => {
+        if (!document.getElementById('photo-viewer-modal').classList.contains('flex')) return;
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.85 : 1.15;
+        viewerScale = Math.min(viewerMaxScale, Math.max(viewerMinScale, viewerScale * delta));
+        clampViewerOffset();
+        applyViewerTransform();
+    }, { passive: false });
+
+    // ── Doble clic per resetar ──
+    container.addEventListener('dblclick', e => {
+        if (e.target.id === 'photo-viewer-img') resetViewerZoom();
+    });
+
+    // ── Arrossegar (ordinador) ──
+    container.addEventListener('mousedown', e => {
+        if (viewerScale <= 1) return;
+        viewerDragging = true;
+        viewerLastX = e.clientX; viewerLastY = e.clientY;
+        container.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', e => {
+        if (!viewerDragging) return;
+        viewerOffsetX += e.clientX - viewerLastX;
+        viewerOffsetY += e.clientY - viewerLastY;
+        viewerLastX = e.clientX; viewerLastY = e.clientY;
+        clampViewerOffset();
+        applyViewerTransform();
+    });
+    window.addEventListener('mouseup', () => {
+        viewerDragging = false;
+        container.style.cursor = viewerScale > 1 ? 'grab' : 'default';
+    });
+
+    // ── Tancament clicant fons (no la imatge) ──
+    container.addEventListener('click', e => {
+        if (e.target === container) closePhotoViewer();
+    });
+
+    // ── Pinch zoom + arrossegar (mòbil) ──
+    container.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            viewerLastDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        } else if (e.touches.length === 1 && viewerScale > 1) {
+            viewerDragging = true;
+            viewerLastX = e.touches[0].clientX;
+            viewerLastY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && viewerLastDist !== null) {
+            e.preventDefault();
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const delta = dist / viewerLastDist;
+            viewerScale = Math.min(viewerMaxScale, Math.max(viewerMinScale, viewerScale * delta));
+            viewerLastDist = dist;
+            clampViewerOffset();
+            applyViewerTransform();
+        } else if (e.touches.length === 1 && viewerDragging) {
+            viewerOffsetX += e.touches[0].clientX - viewerLastX;
+            viewerOffsetY += e.touches[0].clientY - viewerLastY;
+            viewerLastX = e.touches[0].clientX;
+            viewerLastY = e.touches[0].clientY;
+            clampViewerOffset();
+            applyViewerTransform();
+        }
+    }, { passive: false });
+
+    container.addEventListener('touchend', e => {
+        if (e.touches.length < 2) viewerLastDist = null;
+        if (e.touches.length === 0) viewerDragging = false;
+    });
+});
 
 window.onload = () => {
     const p = new URLSearchParams(window.location.search);
