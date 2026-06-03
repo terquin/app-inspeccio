@@ -785,9 +785,87 @@ function resetViewerZoom() {
 }
 
 // ── Scroll (ordinador) ──
-document.addEventListener('DOMContentLoaded', () => {
+// ── Scroll (ordinador) ──
+(function() {
     const container = document.getElementById('photo-viewer-container');
     if (!container) return;
+
+    container.addEventListener('wheel', e => {
+        if (!document.getElementById('photo-viewer-modal').classList.contains('flex')) return;
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.85 : 1.15;
+        viewerScale = Math.min(viewerMaxScale, Math.max(viewerMinScale, viewerScale * delta));
+        clampViewerOffset();
+        applyViewerTransform();
+    }, { passive: false });
+
+    container.addEventListener('dblclick', e => {
+        if (e.target.id === 'photo-viewer-img') resetViewerZoom();
+    });
+
+    container.addEventListener('mousedown', e => {
+        if (viewerScale <= 1) return;
+        viewerDragging = true;
+        viewerLastX = e.clientX; viewerLastY = e.clientY;
+        container.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', e => {
+        if (!viewerDragging) return;
+        viewerOffsetX += e.clientX - viewerLastX;
+        viewerOffsetY += e.clientY - viewerLastY;
+        viewerLastX = e.clientX; viewerLastY = e.clientY;
+        clampViewerOffset();
+        applyViewerTransform();
+    });
+    window.addEventListener('mouseup', () => {
+        viewerDragging = false;
+        container.style.cursor = viewerScale > 1 ? 'grab' : 'default';
+    });
+
+    container.addEventListener('click', e => {
+        if (e.target === container) closePhotoViewer();
+    });
+
+    container.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            viewerLastDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        } else if (e.touches.length === 1 && viewerScale > 1) {
+            viewerDragging = true;
+            viewerLastX = e.touches[0].clientX;
+            viewerLastY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && viewerLastDist !== null) {
+            e.preventDefault();
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const delta = dist / viewerLastDist;
+            viewerScale = Math.min(viewerMaxScale, Math.max(viewerMinScale, viewerScale * delta));
+            viewerLastDist = dist;
+            clampViewerOffset();
+            applyViewerTransform();
+        } else if (e.touches.length === 1 && viewerDragging) {
+            viewerOffsetX += e.touches[0].clientX - viewerLastX;
+            viewerOffsetY += e.touches[0].clientY - viewerLastY;
+            viewerLastX = e.touches[0].clientX;
+            viewerLastY = e.touches[0].clientY;
+            clampViewerOffset();
+            applyViewerTransform();
+        }
+    }, { passive: false });
+
+    container.addEventListener('touchend', e => {
+        if (e.touches.length < 2) viewerLastDist = null;
+        if (e.touches.length === 0) viewerDragging = false;
+    });
+})();
 
     container.addEventListener('wheel', e => {
         if (!document.getElementById('photo-viewer-modal').classList.contains('flex')) return;
