@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inspecció de Camp</title>
 
-    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiSW5zcGVjY2nDsyBkZSBDYW1wIiwic2hvcnRfbmFtZSI6Ikluc3BlY2Npw7MiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YzZjRmNiIsInRoZW1lX2NvbG9yIjoiIzI1NjNlYiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL3VwbG9hZC53aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iL2UvZWQvTWFwX3Bpbl9pY29uLnN2Zy8xOTJweC1NYXBfcGluX2ljb24uc3ZnLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imh0dHBzOi8vdXBsb2FkLndpa2ltZWRpYS5vcmcvd2lraXBlZGlhL2NvbW1vbnMvdGh1bWIvZS9lZC9NYXBfcGluX2ljb24uc3ZnLzUxMnB4LU1hcF9waW5faWNvbi5zdmcucG5nIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJ9XX0=">
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiSW5zcGVjY2nDsyBkZSBDYW1wIiwic2hvcnRfbmFtZSI6Ikluc3BlY2Npw7MiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YzZjRmNiIsInRoZW1lX2NvbG9yIjoiIzI1NjNlYiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL3VwbG9hZC53aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iL2UvZWQvTWFwX3Bpbl9pY29uLnN2Zy8xOTJweC1NYXBfcGluX2ljb24uc3ZnLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imh0dHBzOi8vdXBlob2FkLndpa2ltZWRpYS5vcmcvd2lraXBlZGlhL2NvbW1vbnMvdGh1bWIvZS9lZC9NYXBfcGluX2ljb24uc3ZnLzUxMnB4LU1hcF9waW5faWNvbi5zdmcucG5nIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJ9XX0=">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -163,7 +163,6 @@
                 <span class="text-gray-400 font-normal text-xs" id="edit-photo-info"></span>
                 <span class="text-gray-400 font-normal text-xs ml-1">(comprimides automàticament)</span>
             </label>
-            <!-- Selector de qualitat de compressió -->
             <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
                 <i data-lucide="image" class="w-3 h-3 shrink-0"></i>
                 <label for="quality-select" class="font-semibold shrink-0">Qualitat:</label>
@@ -227,7 +226,6 @@
     </div>
 </div>
 
-<!-- Modal visor de fotos -->
 <div id="photo-viewer-modal" class="fixed inset-0 z-[800] hidden items-center justify-center bg-black/90">
     <button onclick="closePhotoViewer()" class="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 z-10">
         <i data-lucide="x" class="w-6 h-6"></i>
@@ -273,9 +271,6 @@ let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 // COMPRESSIÓ D'IMATGE AMB CANVAS
 // Redimensiona a màx. 1600px i comprimeix a JPEG amb la qualitat triada.
 // Allibera la memòria de l'objecte URL i de l'img temporal just després.
-// ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-// Helpers per escriure EXIF GPS manualment al JPEG
 // ─────────────────────────────────────────────────────────────
 function compressImage(file, quality, maxDim) {
     return new Promise((resolve, reject) => {
@@ -387,9 +382,9 @@ async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     try {
         const fd = new FormData();
         fd.append('chat_id', TG_CHAT_ID);
-        fd.append('photo', blob, `p${numPunt}_f${fotoIndex}.jpg`);  // ✅ 'photo' en lloc de 'document'
+        fd.append('photo', blob, `p${numPunt}_f${fotoIndex}.jpg`);  // 'photo' en lloc de 'document'
         
-        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {  // ✅ sendPhoto
+        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {  // sendPhoto
             method: 'POST', body: fd
         });
         const data = await resp.json();
@@ -577,7 +572,7 @@ async function handlePhoto(event) {
         img.onload = () => URL.revokeObjectURL(previewUrl);
         pc.appendChild(img);
 
-        // ✅ Descàrrega diferida: no bloqueja el fil principal ni la previsualització
+        // Descàrrega diferida: no bloqueja el fil principal ni la previsualització
         const dateString = new Date().toISOString().slice(0,19).replace(/[-T:]/g,"_");
         const filename = `inspeccio_punt_${targetPointNum}_${dateString}_${i+1}.jpg`;
         const blobCopy = compressed.slice(0); // còpia independent per a la descàrrega
@@ -612,7 +607,7 @@ async function savePoint() {
 
     if (!isEdit) savedPoints.push(f);
 
-    // ✅ PRIMER: desa el punt sense fotos (segur contra crashes)
+    // PRIMER: desa el punt sense fotos (segur contra crashes)
     localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
     refreshMapMarkers();
     closeAllPanels();
@@ -650,17 +645,17 @@ function refreshMapMarkers() {
         let h = `<div class="popup-content"><div class="popup-id">#${props.num_punt} ${props.revisat?'(REVISAT)':''}</div>`;
         if(props.notes) h += `<div class="popup-row">${props.notes}</div>`;
        
-if(props.foto_urls?.length) {
-    h += `<div class="popup-fotos-label">${props.foto_urls.length} foto(es):</div>`;
-    props.foto_urls.forEach((url, idx) => {
-        const fid = props.foto_ids?.[idx] || '';
-        h += `<img src="${url}" 
-              onerror="refreshTelegramImage(this,'${fid}')" 
-              onclick="openPhotoViewer('${url}','${fid}')"
-              style="width:100%;border-radius:4px;margin-top:4px;cursor:pointer;" 
-              title="Clic per ampliar">`;
-    });
-}
+        if(props.foto_urls?.length) {
+            h += `<div class="popup-fotos-label">${props.foto_urls.length} foto(es):</div>`;
+            props.foto_urls.forEach((url, idx) => {
+                const fid = props.foto_ids?.[idx] || '';
+                h += `<img src="${url}" 
+                      onerror="refreshTelegramImage(this,'${fid}')" 
+                      onclick="openPhotoViewer('${url}','${fid}')"
+                      style="width:100%;border-radius:4px;margin-top:4px;cursor:pointer;" 
+                      title="Clic per ampliar">`;
+            });
+        }
 
         h += `<div style="text-align:right;margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
                 <button onclick="deletePointById('${f.id}')" style="background:#ef4444;color:white;padding:5px;border-radius:5px;"><i data-lucide="trash-2" style="width:14px;"></i></button>
@@ -698,7 +693,6 @@ function exportGeoJSONonly() {
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
         urls.forEach((url, idx) => {
-            // ✅ Enllaç al visor intern, no a Telegram directament
             f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
         });
     });
@@ -720,7 +714,6 @@ async function exportDataAsZip() {
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
         urls.forEach((url, idx) => {
-            // ✅ Enllaç al visor intern, no a Telegram directament
             f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
         });
     });
@@ -784,8 +777,7 @@ function resetViewerZoom() {
     setTimeout(() => img.style.transition = 'none', 200);
 }
 
-// ── Scroll (ordinador) ──
-// ── Scroll (ordinador) ──
+// Inicialització dels esdeveniments del visor de fotos
 (function() {
     const container = document.getElementById('photo-viewer-container');
     if (!container) return;
@@ -809,6 +801,7 @@ function resetViewerZoom() {
         viewerLastX = e.clientX; viewerLastY = e.clientY;
         container.style.cursor = 'grabbing';
     });
+    
     window.addEventListener('mousemove', e => {
         if (!viewerDragging) return;
         viewerOffsetX += e.clientX - viewerLastX;
@@ -817,6 +810,7 @@ function resetViewerZoom() {
         clampViewerOffset();
         applyViewerTransform();
     });
+    
     window.addEventListener('mouseup', () => {
         viewerDragging = false;
         container.style.cursor = viewerScale > 1 ? 'grab' : 'default';
@@ -867,87 +861,6 @@ function resetViewerZoom() {
     });
 })();
 
-    container.addEventListener('wheel', e => {
-        if (!document.getElementById('photo-viewer-modal').classList.contains('flex')) return;
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.85 : 1.15;
-        viewerScale = Math.min(viewerMaxScale, Math.max(viewerMinScale, viewerScale * delta));
-        clampViewerOffset();
-        applyViewerTransform();
-    }, { passive: false });
-
-    // ── Doble clic per resetar ──
-    container.addEventListener('dblclick', e => {
-        if (e.target.id === 'photo-viewer-img') resetViewerZoom();
-    });
-
-    // ── Arrossegar (ordinador) ──
-    container.addEventListener('mousedown', e => {
-        if (viewerScale <= 1) return;
-        viewerDragging = true;
-        viewerLastX = e.clientX; viewerLastY = e.clientY;
-        container.style.cursor = 'grabbing';
-    });
-    window.addEventListener('mousemove', e => {
-        if (!viewerDragging) return;
-        viewerOffsetX += e.clientX - viewerLastX;
-        viewerOffsetY += e.clientY - viewerLastY;
-        viewerLastX = e.clientX; viewerLastY = e.clientY;
-        clampViewerOffset();
-        applyViewerTransform();
-    });
-    window.addEventListener('mouseup', () => {
-        viewerDragging = false;
-        container.style.cursor = viewerScale > 1 ? 'grab' : 'default';
-    });
-
-    // ── Tancament clicant fons (no la imatge) ──
-    container.addEventListener('click', e => {
-        if (e.target === container) closePhotoViewer();
-    });
-
-    // ── Pinch zoom + arrossegar (mòbil) ──
-    container.addEventListener('touchstart', e => {
-        if (e.touches.length === 2) {
-            viewerLastDist = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
-        } else if (e.touches.length === 1 && viewerScale > 1) {
-            viewerDragging = true;
-            viewerLastX = e.touches[0].clientX;
-            viewerLastY = e.touches[0].clientY;
-        }
-    }, { passive: true });
-
-    container.addEventListener('touchmove', e => {
-        if (e.touches.length === 2 && viewerLastDist !== null) {
-            e.preventDefault();
-            const dist = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
-            const delta = dist / viewerLastDist;
-            viewerScale = Math.min(viewerMaxScale, Math.max(viewerMinScale, viewerScale * delta));
-            viewerLastDist = dist;
-            clampViewerOffset();
-            applyViewerTransform();
-        } else if (e.touches.length === 1 && viewerDragging) {
-            viewerOffsetX += e.touches[0].clientX - viewerLastX;
-            viewerOffsetY += e.touches[0].clientY - viewerLastY;
-            viewerLastX = e.touches[0].clientX;
-            viewerLastY = e.touches[0].clientY;
-            clampViewerOffset();
-            applyViewerTransform();
-        }
-    }, { passive: false });
-
-    container.addEventListener('touchend', e => {
-        if (e.touches.length < 2) viewerLastDist = null;
-        if (e.touches.length === 0) viewerDragging = false;
-    });
-})(); 
-
 window.onload = () => {
     const p = new URLSearchParams(window.location.search);
     if (p.get('view_img')) {
@@ -957,9 +870,9 @@ window.onload = () => {
         </div>`;
         return;
     }
-    initMap(); if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
+    initMap(); 
+    if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
 };
-
 </script>
 </body>
 </html>
