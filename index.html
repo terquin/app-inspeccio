@@ -524,7 +524,7 @@ async function handlePhoto(event) {
     if (!files.length) return;
 
     const quality  = parseFloat(document.getElementById('quality-select').value) || 0.7;
-    const maxDim   = 1600; // píxels màxims per costat
+    const maxDim   = 1600;
     const pc       = document.getElementById('photo-preview-container');
     const statusEl = document.getElementById('photo-status');
     pc.classList.remove('hidden');
@@ -542,22 +542,22 @@ async function handlePhoto(event) {
             continue;
         }
 
-        // Afegim el Blob comprimit (no el File original)
+        // Guardem el blob comprimit
         currentPhotosFiles.push(compressed);
 
-        // Previsualització amb el blob comprimit
+        // Previsualització: URL temporal, alliberat quan ja s'ha carregat
         const previewUrl = URL.createObjectURL(compressed);
         const img = document.createElement('img');
         img.src = previewUrl;
         img.className = "rounded-lg max-h-24 object-cover w-full border";
-        // Allibera l'objecte URL quan la imatge ja s'ha carregat a la pantalla
         img.onload = () => URL.revokeObjectURL(previewUrl);
         pc.appendChild(img);
 
-        // Desa localment la versió comprimida
+        // ✅ Descàrrega diferida: no bloqueja el fil principal ni la previsualització
         const dateString = new Date().toISOString().slice(0,19).replace(/[-T:]/g,"_");
         const filename = `inspeccio_punt_${targetPointNum}_${dateString}_${i+1}.jpg`;
-        savePhotoLocally(compressed, filename);
+        const blobCopy = compressed.slice(0); // còpia independent per a la descàrrega
+        setTimeout(() => savePhotoLocally(blobCopy, filename), 300 * (i + 1));
     }
 
     const totalKB = currentPhotosFiles.reduce((s, b) => s + b.size, 0) / 1024;
@@ -565,12 +565,13 @@ async function handlePhoto(event) {
     event.target.value = '';
 }
 
+
 async function savePoint() {
     if (currentLat===null) { showNotification("GPS?",true); return; }
     const isEdit = editingPointId !== null;
     const revisat = document.getElementById('revisat').checked;
     const estatR = document.querySelector('input[name="estat"]:checked');
-    
+
     let f = isEdit ? savedPoints.find(feat => feat.id === editingPointId) : {
         type:"Feature", id:Date.now().toString(),
         geometry:{type:"Point",coordinates:[currentLon, currentLat]},
@@ -587,15 +588,31 @@ async function savePoint() {
 
     if (!isEdit) savedPoints.push(f);
 
-    if (currentPhotosFiles.length > 0) {
-        showNotification("📤 Pujant...");
+    // ✅ PRIMER: desa el punt sense fotos (segur contra crashes)
+    localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+    refreshMapMarkers();
+    closeAllPanels();
+    showNotification("✅ Punt desat!");
+
+    // DESPRÉS: puja fotos a Telegram en segon pla (no bloqueja la UI)
+    if (currentPhotosFiles.length > 0 && TG_TOKEN && TG_CHAT_ID) {
+        showNotification("📤 Pujant fotos...");
+        let fotosOk = 0;
         for (let i=0; i<currentPhotosFiles.length; i++) {
             const r = await uploadPhotoToTelegram(currentPhotosFiles[i], f.properties.num_punt, f.properties.n_fotos + 1);
-            if (r) { f.properties.foto_urls.push(r.fileUrl); f.properties.foto_ids.push(r.fileId); f.properties.n_fotos++; }
+            if (r) {
+                f.properties.foto_urls.push(r.fileUrl);
+                f.properties.foto_ids.push(r.fileId);
+                f.properties.n_fotos++;
+                fotosOk++;
+            }
+        }
+        if (fotosOk > 0) {
+            // Actualitza localStorage amb les URLs de Telegram
+            localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+            showNotification(`📎 ${fotosOk} foto(es) pujades`);
         }
     }
-    localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
-    refreshMapMarkers(); closeAllPanels();
 }
 
 function refreshMapMarkers() {
