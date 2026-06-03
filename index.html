@@ -543,7 +543,7 @@ async function handlePhoto(event) {
     if (!files.length) return;
 
     const quality  = parseFloat(document.getElementById('quality-select').value) || 0.7;
-    const maxDim   = 1600;
+    const maxDim   = 1024;
     const pc       = document.getElementById('photo-preview-container');
     const statusEl = document.getElementById('photo-status');
     pc.classList.remove('hidden');
