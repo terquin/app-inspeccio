@@ -651,8 +651,14 @@ function exportGeoJSONonly() {
         f.id = parseInt(f.properties.num_punt) || (i + 1);
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
-        f.properties.foto_urls = f.properties.foto_urls.join('|');
-        f.properties.foto_ids = f.properties.foto_ids.join('|');
+
+        // ✅ Un camp per foto: foto_url_1, foto_url_2, ...
+        const urls = f.properties.foto_urls || [];
+        delete f.properties.foto_urls;
+        delete f.properties.foto_ids;
+        urls.forEach((url, idx) => {
+            f.properties[`foto_url_${idx + 1}`] = url;
+        });
     });
     const b = new Blob([JSON.stringify(buildGeoJSONExport(feats),null,2)],{type:'application/geo+json'});
     const a = document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`insp_${new Date().getTime()}.geojson`; a.click();
@@ -666,7 +672,14 @@ async function exportDataAsZip() {
         f.id = parseInt(f.properties.num_punt) || (i + 1);
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
-        f.properties.foto_urls = f.properties.foto_urls.join('|');
+
+        // ✅ Un camp per foto: foto_url_1, foto_url_2, ...
+        const urls = f.properties.foto_urls || [];
+        delete f.properties.foto_urls;
+        delete f.properties.foto_ids;
+        urls.forEach((url, idx) => {
+            f.properties[`foto_url_${idx + 1}`] = url;
+        });
     });
     zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats)));
     const c = await zip.generateAsync({type:"blob"});
