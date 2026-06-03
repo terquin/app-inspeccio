@@ -936,7 +936,7 @@ function resetViewerZoom() {
             viewerOffsetX += e.touches[0].clientX - viewerLastX;
             viewerOffsetY += e.touches[0].clientY - viewerLastY;
             viewerLastX = e.touches[0].clientX;
-            viewerLastY = e.touches[0].clientY;    
+            viewerLastY = e.touches[0].clientY;
             clampViewerOffset();
             applyViewerTransform();
         }
@@ -946,7 +946,7 @@ function resetViewerZoom() {
         if (e.touches.length < 2) viewerLastDist = null;
         if (e.touches.length === 0) viewerDragging = false;
     });
-});
+}();
 
 window.onload = () => {
     const p = new URLSearchParams(window.location.search);
@@ -958,7 +958,8 @@ window.onload = () => {
         return;
     }
     initMap(); if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
-};
+});
+
 </script>
 </body>
 </html>
