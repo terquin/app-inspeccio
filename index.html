@@ -223,6 +223,14 @@
         <button onclick="clearData()" class="w-full bg-red-50 text-red-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-red-200 mt-4">
             <i data-lucide="trash-2"></i> Esborrar totes les dades
         </button>
+
+        <div class="h-px bg-gray-100 my-2"></div>
+        
+        <button onclick="document.getElementById('import-file').click()" class="w-full bg-indigo-50 text-indigo-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-indigo-200 mt-2">
+            <i data-lucide="folder-up"></i> Importar GeoJSON
+        </button>
+        <input type="file" id="import-file" accept=".geojson,application/geo+json" class="hidden" onchange="importGeoJSON(event)">
+  
     </div>
 </div>
 
@@ -860,6 +868,53 @@ function resetViewerZoom() {
         if (e.touches.length === 0) viewerDragging = false;
     });
 })();
+
+// Funció inversa: d'UTM31 a WGS84 (per poder llegir el que exportem)
+function utm31ToWgs84(x, y) {
+    const [lon, lat] = proj4("EPSG:25831", "EPSG:4326", [x, y]);
+    return { lat, lon };
+}
+
+// Funció per processar l'arxiu GeoJSON
+function importGeoJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.type !== "FeatureCollection" || !data.features) {
+                throw new Error("Format no vàlid");
+            }
+
+            const importedPoints = data.features.map(f => {
+                // Convertim les coordenades X/Y de tornada a Lat/Lon
+                const [x, y] = f.geometry.coordinates;
+                const wgs84 = utm31ToWgs84(x, y);
+                f.geometry.coordinates = [wgs84.lon, wgs84.lat];
+                
+                // Generem un nou ID intern per evitar conflictes
+                f.id = Date.now().toString() + Math.floor(Math.random() * 1000);
+                return f;
+            });
+
+            // Afegim els nous punts als que ja teníem
+            savedPoints = savedPoints.concat(importedPoints);
+            localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+            
+            refreshMapMarkers();
+            closeAllPanels();
+            showNotification(`✅ ${importedPoints.length} punts importats correctament!`);
+            
+        } catch (err) {
+            showNotification("❌ Error al llegir l'arxiu GeoJSON", true);
+            console.error(err);
+        }
+        event.target.value = ''; // Reseteja el camp d'arxiu
+    };
+    reader.readAsText(file);
+}
 
 window.onload = () => {
     // 1. Primer inicialitzem l'app normalment
