@@ -38,7 +38,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
     <style>
-
+        /* Animació del micròfon escoltant */
         @keyframes pulse-mic {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
             70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
@@ -130,17 +130,22 @@
             <button onclick="locateUser()" class="text-blue-500 p-1"><i data-lucide="locate" class="w-4 h-4"></i></button>
         </div>
 
-            <div class="flex flex-col gap-1">
-            <div class="flex justify-between items-center">
-                <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
-                <button type="button" id="btn-dictate" onclick="toggleDictation()" class="hidden text-blue-600 bg-blue-50 p-2 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-200">
-                    <i data-lucide="mic" class="w-4 h-4"></i>
-                </button>
-            </div>
-
-            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Notes..."></textarea>
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">FID <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
+            <input type="number" id="codi" inputmode="numeric" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 1, 23...">
         </div>
 
+        <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700 text-sm">Tipus</label>
+            <select id="tipus" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <option value="">-- Selecciona --</option>
+                <option value="incidencia">Incidència</option>
+                <option value="element">Element inventariat</option>
+                <option value="mostra">Mostra</option>
+                <option value="observacio">Observació</option>
+                <option value="altres">Altres</option>
+            </select>
+        </div>
 
         <div class="flex flex-col gap-1">
             <label class="font-semibold text-gray-700 text-sm">Estat</label>
@@ -161,7 +166,12 @@
         </div>
 
         <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
+            <div class="flex justify-between items-center">
+                <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
+                <button type="button" id="btn-dictate" onclick="toggleDictation()" class="hidden text-blue-600 bg-blue-50 p-2 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-200">
+                    <i data-lucide="mic" class="w-4 h-4"></i>
+                </button>
+            </div>
             <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Notes..."></textarea>
         </div>
         
@@ -276,18 +286,14 @@ document.getElementById('quality-select').addEventListener('change', function() 
 });
 
 let map, userMarker, currentLat = null, currentLon = null;
-let currentPhotosFiles = [];   // Ara guardarem Blobs comprimits, no File originals
+let currentPhotosFiles = [];   
 let savedPoints = [];
 let editingPointId = null;
 
 let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
 let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 
-// ─────────────────────────────────────────────────────────────
 // COMPRESSIÓ D'IMATGE AMB CANVAS
-// Redimensiona a màx. 1600px i comprimeix a JPEG amb la qualitat triada.
-// Allibera la memòria de l'objecte URL i de l'img temporal just després.
-// ─────────────────────────────────────────────────────────────
 function compressImage(file, quality, maxDim) {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -312,13 +318,11 @@ function compressImage(file, quality, maxDim) {
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
-                        const dataUrl = e.target.result; // "data:image/jpeg;base64,..."
+                        const dataUrl = e.target.result;
 
-                        // Llegim l'EXIF existent (si n'hi ha) per no perdre'l
                         let exifObj = { GPS: {} };
                         try { exifObj = piexif.load(dataUrl); } catch(ex) { exifObj = { GPS: {} }; }
 
-                        // Funció per convertir decimal a [graus, minuts, segons] com a racionals
                         function toRat(val) {
                             val = Math.abs(val);
                             const deg = Math.floor(val);
@@ -338,14 +342,13 @@ function compressImage(file, quality, maxDim) {
                         const exifBytes = piexif.dump(exifObj);
                         const newDataUrl = piexif.insert(exifBytes, dataUrl);
 
-                        // Convertim dataUrl → Blob
                         const bin = atob(newDataUrl.split(',')[1]);
                         const arr = new Uint8Array(bin.length);
                         for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
                         resolve(new Blob([arr], { type: 'image/jpeg' }));
                     } catch (err) {
                         console.warn('EXIF inject error:', err);
-                        resolve(blob); // fallback sense GPS
+                        resolve(blob);
                     }
                 };
                 reader.readAsDataURL(blob);
@@ -355,8 +358,6 @@ function compressImage(file, quality, maxDim) {
         img.src = url;
     });
 }
-
-// ─────────────────────────────────────────────────────────────
 
 function openTelegramModal() {
     document.getElementById('tg-token-input').value  = TG_TOKEN;
@@ -393,20 +394,25 @@ function wgs84ToUtm31(lon, lat) {
     return { x: Math.round(x*100)/100, y: Math.round(y*100)/100 };
 }
 
+// Funció inversa d'UTM31 a WGS84 per importar
+function utm31ToWgs84(x, y) {
+    const [lon, lat] = proj4("EPSG:25831", "EPSG:4326", [x, y]);
+    return { lat, lon };
+}
+
 async function uploadPhotoToTelegram(blob, numPunt, fotoIndex) {
     if (!TG_TOKEN || !TG_CHAT_ID) return null;
     try {
         const fd = new FormData();
         fd.append('chat_id', TG_CHAT_ID);
-        fd.append('photo', blob, `p${numPunt}_f${fotoIndex}.jpg`);  // 'photo' en lloc de 'document'
+        fd.append('photo', blob, `p${numPunt}_f${fotoIndex}.jpg`); 
         
-        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {  // sendPhoto
+        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`, {
             method: 'POST', body: fd
         });
         const data = await resp.json();
         if (!data.ok) return null;
 
-        // sendPhoto retorna un array de mides, agafem la més gran
         const photos = data.result.photo;
         const biggest = photos[photos.length - 1];
         const fileId = biggest.file_id;
@@ -541,7 +547,6 @@ function locateUser() {
     navigator.geolocation.getCurrentPosition(p=>{ updatePosition(p.coords.latitude,p.coords.longitude); map.flyTo([p.coords.latitude,p.coords.longitude],17); }, null, {enableHighAccuracy:true});
 }
 
-// Desa la foto comprimida localment
 function savePhotoLocally(blob, filename) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -551,9 +556,6 @@ function savePhotoLocally(blob, filename) {
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
-// ─────────────────────────────────────────────────────────────
-// handlePhoto: comprimit PRIMER, DESPRÉS previsualitza i desa
-// ─────────────────────────────────────────────────────────────
 async function handlePhoto(event) {
     const files = event.target.files;
     if (!files.length) return;
@@ -577,10 +579,8 @@ async function handlePhoto(event) {
             continue;
         }
 
-        // Guardem el blob comprimit
         currentPhotosFiles.push(compressed);
 
-        // Previsualització: URL temporal, alliberat quan ja s'ha carregat
         const previewUrl = URL.createObjectURL(compressed);
         const img = document.createElement('img');
         img.src = previewUrl;
@@ -588,10 +588,9 @@ async function handlePhoto(event) {
         img.onload = () => URL.revokeObjectURL(previewUrl);
         pc.appendChild(img);
 
-        // Descàrrega diferida: no bloqueja el fil principal ni la previsualització
         const dateString = new Date().toISOString().slice(0,19).replace(/[-T:]/g,"_");
         const filename = `inspeccio_punt_${targetPointNum}_${dateString}_${i+1}.jpg`;
-        const blobCopy = compressed.slice(0); // còpia independent per a la descàrrega
+        const blobCopy = compressed.slice(0);
         setTimeout(() => savePhotoLocally(blobCopy, filename), 300 * (i + 1));
     }
 
@@ -623,13 +622,11 @@ async function savePoint() {
 
     if (!isEdit) savedPoints.push(f);
 
-    // PRIMER: desa el punt sense fotos (segur contra crashes)
     localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
     refreshMapMarkers();
     closeAllPanels();
     showNotification("✅ Punt desat!");
 
-    // DESPRÉS: puja fotos a Telegram en segon pla (no bloqueja la UI)
     if (currentPhotosFiles.length > 0 && TG_TOKEN && TG_CHAT_ID) {
         showNotification("📤 Pujant fotos...");
         let fotosOk = 0;
@@ -643,7 +640,6 @@ async function savePoint() {
             }
         }
         if (fotosOk > 0) {
-            // Actualitza localStorage amb les URLs de Telegram
             localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
             showNotification(`📎 ${fotosOk} foto(es) pujades`);
         }
@@ -740,9 +736,44 @@ async function exportDataAsZip() {
 
 function clearData() { if(confirm("Segur?")) { localStorage.removeItem('inspeccions_qgis'); location.reload(); } }
 
-// ─────────────────────────────────────────────────────────────
+function importGeoJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.type !== "FeatureCollection" || !data.features) {
+                throw new Error("Format no vàlid");
+            }
+
+            const importedPoints = data.features.map(f => {
+                const [x, y] = f.geometry.coordinates;
+                const wgs84 = utm31ToWgs84(x, y);
+                f.geometry.coordinates = [wgs84.lon, wgs84.lat];
+                
+                f.id = Date.now().toString() + Math.floor(Math.random() * 1000);
+                return f;
+            });
+
+            savedPoints = savedPoints.concat(importedPoints);
+            localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+            
+            refreshMapMarkers();
+            closeAllPanels();
+            showNotification(`✅ ${importedPoints.length} punts importats correctament!`);
+            
+        } catch (err) {
+            showNotification("❌ Error al llegir l'arxiu GeoJSON", true);
+            console.error(err);
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
 // VISOR DE FOTOS AMB ZOOM
-// ─────────────────────────────────────────────────────────────
 let viewerScale = 1, viewerMinScale = 1, viewerMaxScale = 5;
 let viewerOffsetX = 0, viewerOffsetY = 0;
 let viewerDragging = false, viewerLastX = 0, viewerLastY = 0;
@@ -793,7 +824,6 @@ function resetViewerZoom() {
     setTimeout(() => img.style.transition = 'none', 200);
 }
 
-// Inicialització dels esdeveniments del visor de fotos
 (function() {
     const container = document.getElementById('photo-viewer-container');
     if (!container) return;
@@ -877,68 +907,17 @@ function resetViewerZoom() {
     });
 })();
 
-// Funció inversa: d'UTM31 a WGS84 (per poder llegir el que exportem)
-function utm31ToWgs84(x, y) {
-    const [lon, lat] = proj4("EPSG:25831", "EPSG:4326", [x, y]);
-    return { lat, lon };
-}
-
-// Funció per processar l'arxiu GeoJSON
-function importGeoJSON(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
-            if (data.type !== "FeatureCollection" || !data.features) {
-                throw new Error("Format no vàlid");
-            }
-
-            const importedPoints = data.features.map(f => {
-                // Convertim les coordenades X/Y de tornada a Lat/Lon
-                const [x, y] = f.geometry.coordinates;
-                const wgs84 = utm31ToWgs84(x, y);
-                f.geometry.coordinates = [wgs84.lon, wgs84.lat];
-                
-                // Generem un nou ID intern per evitar conflictes
-                f.id = Date.now().toString() + Math.floor(Math.random() * 1000);
-                return f;
-            });
-
-            // Afegim els nous punts als que ja teníem
-            savedPoints = savedPoints.concat(importedPoints);
-            localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
-            
-            refreshMapMarkers();
-            closeAllPanels();
-            showNotification(`✅ ${importedPoints.length} punts importats correctament!`);
-            
-        } catch (err) {
-            showNotification("❌ Error al llegir l'arxiu GeoJSON", true);
-            console.error(err);
-        }
-        event.target.value = ''; // Reseteja el camp d'arxiu
-    };
-    reader.readAsText(file);
-}
-
-// ─────────────────────────────────────────────────────────────
 // DICTAT PER VEU (Speech to Text)
-// ─────────────────────────────────────────────────────────────
 let recognition = null;
 let isRecording = false;
 
-// Comprovem si el navegador del mòbil suporta el dictat
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    recognition.lang = 'ca-ES'; // Idioma del dictat (català)
-    recognition.continuous = false; // S'atura automàticament quan deixes de parlar
+    recognition.lang = 'ca-ES'; 
+    recognition.continuous = false; 
     recognition.interimResults = true;
 
-    // Si hi ha suport, mostrem el botó amagat
     setTimeout(() => {
         const btn = document.getElementById('btn-dictate');
         if (btn) btn.classList.remove('hidden');
@@ -958,11 +937,9 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             }
         }
         
-        // Quan acabi de processar la frase, l'afegeix al final del que ja hi hagi escrit
         if (finalTranscript) {
             const notesEl = document.getElementById('notes');
             const currentText = notesEl.value;
-            // Afegeix un espai si ja hi havia text previ
             notesEl.value = currentText + (currentText.length > 0 && !currentText.endsWith(' ') ? ' ' : '') + finalTranscript;
         }
     };
@@ -1004,11 +981,9 @@ function stopDictation() {
 }
 
 window.onload = () => {
-    // 1. Primer inicialitzem l'app normalment
     initMap(); 
     if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
 
-    // 2. Si venim des d'un enllaç extern (SIG), obrim el visor amb zoom
     const p = new URLSearchParams(window.location.search);
     if (p.get('view_img')) {
         openPhotoViewer(p.get('view_img'), p.get('file_id'));
