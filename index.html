@@ -38,6 +38,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
     <style>
+
+        @keyframes pulse-mic {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .mic-recording {
+            background-color: #fee2e2 !important;
+            color: #ef4444 !important;
+            border-color: #fca5a5 !important;
+            animation: pulse-mic 1.5s infinite;
+        }
+
         body, html { margin:0; padding:0; height:100%; width:100%; overflow:hidden; background:#f3f4f6; }
         #map { height:100vh; width:100%; z-index:1; }
         ::-webkit-scrollbar { width:6px; }
@@ -117,9 +130,15 @@
             <button onclick="locateUser()" class="text-blue-500 p-1"><i data-lucide="locate" class="w-4 h-4"></i></button>
         </div>
 
-        <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700 text-sm">FID <span class="text-gray-400 font-normal text-xs">(opcional)</span></label>
-            <input type="number" id="codi" inputmode="numeric" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 1, 23...">
+            <div class="flex flex-col gap-1">
+            <div class="flex justify-between items-center">
+                <label class="font-semibold text-gray-700 text-sm">Apunts i Observacions</label>
+                <button type="button" id="btn-dictate" onclick="toggleDictation()" class="hidden text-blue-600 bg-blue-50 p-2 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-200">
+                    <i data-lucide="mic" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <textarea id="notes" rows="3" class="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Notes..."></textarea>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -914,6 +933,85 @@ function importGeoJSON(event) {
         event.target.value = ''; // Reseteja el camp d'arxiu
     };
     reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────────────
+// DICTAT PER VEU (Speech to Text)
+// ─────────────────────────────────────────────────────────────
+let recognition = null;
+let isRecording = false;
+
+// Comprovem si el navegador del mòbil suporta el dictat
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ca-ES'; // Idioma del dictat (català)
+    recognition.continuous = false; // S'atura automàticament quan deixes de parlar
+    recognition.interimResults = true;
+
+    // Si hi ha suport, mostrem el botó amagat
+    setTimeout(() => {
+        const btn = document.getElementById('btn-dictate');
+        if (btn) btn.classList.remove('hidden');
+    }, 500);
+
+    recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('btn-dictate').classList.add('mic-recording');
+        showNotification("🎙️ Escoltant... Parla ara", false);
+    };
+
+    recognition.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            }
+        }
+        
+        // Quan acabi de processar la frase, l'afegeix al final del que ja hi hagi escrit
+        if (finalTranscript) {
+            const notesEl = document.getElementById('notes');
+            const currentText = notesEl.value;
+            // Afegeix un espai si ja hi havia text previ
+            notesEl.value = currentText + (currentText.length > 0 && !currentText.endsWith(' ') ? ' ' : '') + finalTranscript;
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Error de dictat:", event.error);
+        if (event.error === 'not-allowed') {
+            showNotification("❌ Permís de micròfon denegat", true);
+        }
+        stopDictation();
+    };
+
+    recognition.onend = () => {
+        stopDictation();
+    };
+}
+
+function toggleDictation() {
+    if (!recognition) {
+        showNotification("El teu navegador no suporta el dictat", true);
+        return;
+    }
+    
+    if (isRecording) {
+        recognition.stop();
+    } else {
+        try {
+            recognition.start();
+        } catch(e) {
+            console.error(e);
+        }
+    }
+}
+
+function stopDictation() {
+    isRecording = false;
+    const btn = document.getElementById('btn-dictate');
+    if (btn) btn.classList.remove('mic-recording');
 }
 
 window.onload = () => {
