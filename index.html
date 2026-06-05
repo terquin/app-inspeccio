@@ -1105,7 +1105,6 @@ function importLocalPhotos(event) {
     const files = Array.from(event.target.files);
     if (!files.length) return;
 
-    // Allibera URLs anteriors per evitar fuites de memòria
     Object.values(localPhotosByPoint).flat().forEach(u => URL.revokeObjectURL(u));
     localPhotosByPoint = {};
 
@@ -1113,9 +1112,9 @@ function importLocalPhotos(event) {
     let noAssociades = 0;
 
     files.forEach(file => {
-        // Intenta extreure el número de punt del nom: punt_N_ o _N_
-        const match = file.name.match(/punt[_\-](\d+)[_\-]/i) ||
-                      file.name.match(/[_\-](\d+)[_\-]/);
+        // Format exacte: inspeccio_punt_N_YYYY_... o punt_N_...
+        // Agafa el número just després de "punt_"
+        const match = file.name.match(/punt[_\-](\d+)[_\-]/i);
         const numPunt = match ? parseInt(match[1]) : null;
 
         if (numPunt !== null) {
@@ -1127,7 +1126,6 @@ function importLocalPhotos(event) {
         }
     });
 
-    // Refresca els marcadors perquè usin les fotos locals
     refreshMapMarkers();
     closeAllPanels();
 
