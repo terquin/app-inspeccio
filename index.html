@@ -247,6 +247,11 @@
         <button onclick="document.getElementById('import-file').click()" class="w-full bg-indigo-50 text-indigo-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-indigo-200 mt-2">
             <i data-lucide="folder-up"></i> Importar GeoJSON
         </button>
+        <button onclick="document.getElementById('import-photos').click()" class="w-full bg-orange-50 text-orange-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-orange-200 mt-2">
+        <i data-lucide="image-plus"></i> Carregar fotos locals
+        </button>
+        <input type="file" id="import-photos" accept="image/*" multiple class="hidden" onchange="importLocalPhotos(event)">
+        <div id="local-photos-status" class="text-xs text-center text-gray-400 mt-1 hidden"></div>
         <input type="file" id="import-file" accept=".geojson,application/geo+json" class="hidden" onchange="importGeoJSON(event)">
   
     </div>
@@ -657,17 +662,33 @@ function refreshMapMarkers() {
         let h = `<div class="popup-content"><div class="popup-id">#${props.num_punt} ${props.revisat?'(REVISAT)':''}</div>`;
         if(props.notes) h += `<div class="popup-row">${props.notes}</div>`;
        
-        if(props.foto_urls?.length) {
-            h += `<div class="popup-fotos-label">${props.foto_urls.length} foto(es):</div>`;
-            props.foto_urls.forEach((url, idx) => {
-                const fid = props.foto_ids?.[idx] || '';
-                h += `<img src="${url}" 
-                      onerror="refreshTelegramImage(this,'${fid}')" 
-                      onclick="openPhotoViewer('${url}','${fid}')"
-                      style="width:100%;border-radius:4px;margin-top:4px;cursor:pointer;" 
-                      title="Clic per ampliar">`;
-            });
-        }
+        // Fotos: combina Telegram + locals
+const localFotos = localPhotosByPoint[props.num_punt] || [];
+const telegramUrls = props.foto_urls || [];
+const telegramIds  = props.foto_ids  || [];
+const totalFotos = telegramUrls.length + localFotos.length;
+
+if (totalFotos > 0) {
+    h += `<div class="popup-fotos-label">${totalFotos} foto(es):</div>`;
+    
+    // Fotos de Telegram
+    telegramUrls.forEach((url, idx) => {
+        const fid = telegramIds[idx] || '';
+        h += `<img src="${url}"
+              onerror="refreshTelegramImage(this,'${fid}')"
+              onclick="openPhotoViewer('${url}','${fid}')"
+              style="width:100%;border-radius:4px;margin-top:4px;cursor:pointer;"
+              title="Clic per ampliar (Telegram)">`;
+    });
+
+    // Fotos locals (objectURL)
+    localFotos.forEach((objUrl, idx) => {
+        h += `<img src="${objUrl}"
+              onclick="openPhotoViewer('${objUrl}','')"
+              style="width:100%;border-radius:4px;margin-top:4px;cursor:pointer;border:2px solid #f59e0b;"
+              title="Foto local ${idx + 1} · Clic per ampliar">`;
+    });
+}
 
         h += `<div style="text-align:right;margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
                 <button onclick="deletePointById('${f.id}')" style="background:#ef4444;color:white;padding:5px;border-radius:5px;"><i data-lucide="trash-2" style="width:14px;"></i></button>
@@ -992,6 +1013,53 @@ function stopDictation() {
     isRecording = false;
     const btn = document.getElementById('btn-dictate');
     if (btn) btn.classList.remove('mic-recording');
+}
+
+// ─────────────────────────────────────────────────────────────
+// FOTOS LOCALS — associa imatges de disc als punts pel nom
+// Nom esperat: inspeccio_punt_N_* o qualsevol fitxer que
+// contingui el número de punt al nom
+// ─────────────────────────────────────────────────────────────
+let localPhotosByPoint = {}; // { numPunt: [objectURL, ...] }
+
+function importLocalPhotos(event) {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+
+    // Allibera URLs anteriors per evitar fuites de memòria
+    Object.values(localPhotosByPoint).flat().forEach(u => URL.revokeObjectURL(u));
+    localPhotosByPoint = {};
+
+    let associades = 0;
+    let noAssociades = 0;
+
+    files.forEach(file => {
+        // Intenta extreure el número de punt del nom: punt_N_ o _N_
+        const match = file.name.match(/punt[_\-](\d+)[_\-]/i) ||
+                      file.name.match(/[_\-](\d+)[_\-]/);
+        const numPunt = match ? parseInt(match[1]) : null;
+
+        if (numPunt !== null) {
+            if (!localPhotosByPoint[numPunt]) localPhotosByPoint[numPunt] = [];
+            localPhotosByPoint[numPunt].push(URL.createObjectURL(file));
+            associades++;
+        } else {
+            noAssociades++;
+        }
+    });
+
+    // Refresca els marcadors perquè usin les fotos locals
+    refreshMapMarkers();
+    closeAllPanels();
+
+    const statusEl = document.getElementById('local-photos-status');
+    statusEl.classList.remove('hidden');
+    statusEl.innerText = `✅ ${associades} foto(es) associades${noAssociades > 0 ? ` · ${noAssociades} sense punt reconegut` : ''}`;
+
+    if (associades > 0) showNotification(`📁 ${associades} fotos locals carregades`);
+    else showNotification('Cap foto associada — comprova els noms dels fitxers', true);
+
+    event.target.value = '';
 }
 
 window.onload = () => {
