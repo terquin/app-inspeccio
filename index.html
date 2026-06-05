@@ -477,23 +477,62 @@ function editPoint(id) {
         const r = document.querySelector(`input[name="estat"][value="${f.properties.estat}"]`);
         if (r) { r.checked = true; updateEstat(r); }
     }
-    currentPhotosFiles=[];
-    document.getElementById('photo-preview-container').innerHTML='';
-    document.getElementById('photo-preview-container').classList.add('hidden');
-    document.getElementById('edit-photo-info').innerText = f.properties.n_fotos > 0 ? `(${f.properties.n_fotos} prev.)` : "";
+    currentPhotosFiles = [];
+
+    // ✅ Mostra les fotos existents al formulari d'edició
+    const pc = document.getElementById('photo-preview-container');
+    pc.innerHTML = '';
+    const urls = f.properties.foto_urls || [];
+    const ids  = f.properties.foto_ids  || [];
+
+    if (urls.length > 0) {
+        pc.classList.remove('hidden');
+        urls.forEach((url, idx) => {
+            const fid = ids[idx] || '';
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;';
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.className = "rounded-lg max-h-24 object-cover w-full border cursor-pointer";
+            img.title = "Clic per ampliar";
+            img.onclick = () => openPhotoViewer(url, fid);
+            img.onerror = async () => {
+                if (fid && !img.dataset.retried && TG_TOKEN) {
+                    img.dataset.retried = 'true';
+                    try {
+                        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fid}`);
+                        const data = await resp.json();
+                        if (data.ok) {
+                            const newUrl = `https://api.telegram.org/file/bot${TG_TOKEN}/${data.result.file_path}`;
+                            img.src = newUrl;
+                            img.onclick = () => openPhotoViewer(newUrl, fid);
+                            // Actualitza savedPoints
+                            f.properties.foto_urls[idx] = newUrl;
+                            localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+                        } else {
+                            img.style.display = 'none';
+                        }
+                    } catch(e) { img.style.display = 'none'; }
+                } else {
+                    img.style.display = 'none';
+                }
+            };
+            wrapper.appendChild(img);
+            pc.appendChild(wrapper);
+        });
+        document.getElementById('edit-photo-info').innerText = `(${urls.length} prev.)`;
+        document.getElementById('photo-status').innerText = `${urls.length} foto(es) guardades`;
+    } else {
+        pc.classList.add('hidden');
+        document.getElementById('edit-photo-info').innerText = '';
+        document.getElementById('photo-status').innerText = "Sense fotos noves";
+    }
+
     map.closePopup();
     backdrop.classList.remove('hidden');
-    setTimeout(()=>formPanel.classList.remove('translate-y-full'), 10);
+    setTimeout(() => formPanel.classList.remove('translate-y-full'), 10);
     lucide.createIcons();
-}
-
-function deletePointById(id) {
-    if(confirm("Eliminar punt?")) {
-        savedPoints = savedPoints.filter(f => f.id !== id);
-        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
-        refreshMapMarkers();
-        closeAllPanels();
-    }
 }
 
 function deleteCurrentPoint() { if(editingPointId) deletePointById(editingPointId); }
@@ -1097,7 +1136,29 @@ function stopDictation() {
 let localPhotosByPoint = {}; // { numPunt: [objectURL, ...] }
 let localBlobCache = {};
 
-
+window.handleImgError = async function(imgId, fileId) {
+    if (!fileId || !TG_TOKEN) return;
+    try {
+        const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
+        const data = await resp.json();
+        if (data.ok) {
+            const newUrl = `https://api.telegram.org/file/bot${TG_TOKEN}/${data.result.file_path}`;
+            const imgEl = document.getElementById(imgId);
+            if (imgEl) {
+                imgEl.onerror = null;
+                imgEl.src = newUrl;
+                imgEl.onclick = () => openPhotoViewer(newUrl, fileId);
+            }
+            savedPoints.forEach(f => {
+                const idx = (f.properties.foto_ids || []).indexOf(fileId);
+                if (idx >= 0) {
+                    f.properties.foto_urls[idx] = newUrl;
+                    localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
+                }
+            });
+        }
+    } catch(e) {}
+};
 
 window.onload = () => {
     const p = new URLSearchParams(window.location.search);
