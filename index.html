@@ -1105,6 +1105,8 @@ function importLocalPhotos(event) {
     const files = Array.from(event.target.files);
     if (!files.length) return;
 
+    alert(files.map(f => `"${f.name}"`).join('\n'));
+
     Object.values(localPhotosByPoint).flat().forEach(u => URL.revokeObjectURL(u));
     localPhotosByPoint = {};
 
