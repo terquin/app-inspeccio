@@ -807,6 +807,20 @@ function openPhotoViewer(url, fileId) {
             refreshTelegramImage(img, fileId);
         }
     };
+
+    // ✅ Botó de descàrrega dinàmic
+    let dlBtn = document.getElementById('photo-viewer-download');
+    if (!dlBtn) {
+        dlBtn = document.createElement('a');
+        dlBtn.id = 'photo-viewer-download';
+        dlBtn.target = '_blank';
+        dlBtn.innerHTML = '⬇';
+        dlBtn.title = 'Descarregar foto';
+        dlBtn.style.cssText = 'position:absolute;bottom:24px;right:16px;z-index:10;background:rgba(0,0,0,0.5);color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:16px;';
+        modal.appendChild(dlBtn);
+    }
+    dlBtn.href = url;
+
     modal.classList.replace('hidden', 'flex');
     lucide.createIcons();
 }
@@ -993,68 +1007,7 @@ window.onload = () => {
         setTimeout(() => openPhotoViewer(viewImg, fileId || ''), 300);
     }
 };
-BLOC 2 — Substitueix openPhotoViewer (ja la tens, només afegeix el botó de descàrrega)
-javascript
-function openPhotoViewer(url, fileId) {
-    const modal = document.getElementById('photo-viewer-modal');
-    const img   = document.getElementById('photo-viewer-img');
-    viewerScale = 1; viewerOffsetX = 0; viewerOffsetY = 0;
-    img.style.transition = 'none';
-    applyViewerTransform();
-    img.src = '';
-    img.src = url;
-    img.dataset.retried = '';
-    img.onerror = () => {
-        if (fileId && !img.dataset.retried) {
-            img.dataset.retried = 'true';
-            refreshTelegramImage(img, fileId);
-        }
-    };
 
-    // ✅ Botó de descàrrega dinàmic
-    let dlBtn = document.getElementById('photo-viewer-download');
-    if (!dlBtn) {
-        dlBtn = document.createElement('a');
-        dlBtn.id = 'photo-viewer-download';
-        dlBtn.target = '_blank';
-        dlBtn.innerHTML = '⬇';
-        dlBtn.title = 'Descarregar foto';
-        dlBtn.style.cssText = 'position:absolute;bottom:24px;right:16px;z-index:10;background:rgba(0,0,0,0.5);color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:16px;';
-        modal.appendChild(dlBtn);
-    }
-    dlBtn.href = url;
-
-    modal.classList.replace('hidden', 'flex');
-    lucide.createIcons();
-}
-On enganxar
-Els dos blocs substitueixen funcions que ja existeixen al teu codi:
-
-... importGeoJSON() ...
-... visor de fotos amb zoom (function(){...})() ...
-
-👉 [AQUÍ substitueix openPhotoViewer existent]
-
-... closePhotoViewer() ...
-... resetViewerZoom() ...
-... DICTAT PER VEU ...
-
-window.onload = () => {
-    const p = new URLSearchParams(window.location.search);
-    const viewImg = p.get('view_img');
-    const fileId  = p.get('file_id');
-
-    initMap();
-    if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
-
-    // ✅ Si ve d'un enllaç de foto (des del GeoJSON), obre el visor directament
-    if (viewImg) {
-        setTimeout(() => openPhotoViewer(viewImg, fileId || ''), 300);
-    }
-};
-
-
-    
 </script>
 </body>
 </html>
