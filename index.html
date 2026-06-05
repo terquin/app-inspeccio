@@ -247,11 +247,7 @@
         <button onclick="document.getElementById('import-file').click()" class="w-full bg-indigo-50 text-indigo-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-indigo-200 mt-2">
             <i data-lucide="folder-up"></i> Importar GeoJSON
         </button>
-        <button onclick="document.getElementById('import-photos').click()" class="w-full bg-orange-50 text-orange-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-orange-200 mt-2">
-        <i data-lucide="image-plus"></i> Carregar fotos locals
-        </button>
-        <input type="file" id="import-photos" accept="image/*" multiple class="hidden" onchange="importLocalPhotos(event)">
-        <div id="local-photos-status" class="text-xs text-center text-gray-400 mt-1 hidden"></div>
+        
         <input type="file" id="import-file" accept=".geojson,application/geo+json" class="hidden" onchange="importGeoJSON(event)">
   
     </div>
@@ -1101,45 +1097,7 @@ function stopDictation() {
 let localPhotosByPoint = {}; // { numPunt: [objectURL, ...] }
 let localBlobCache = {};
 
-function importLocalPhotos(event) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
 
-    alert(files.map(f => `"${f.name}"`).join('\n'));
-
-    Object.values(localPhotosByPoint).flat().forEach(u => URL.revokeObjectURL(u));
-    localPhotosByPoint = {};
-
-    let associades = 0;
-    let noAssociades = 0;
-
-    files.forEach(file => {
-        // Format exacte: inspeccio_punt_N_YYYY_... o punt_N_...
-        // Agafa el número just després de "punt_"
-        const match = file.name.match(/punt[_\-](\d+)[_\-]/i);
-        const numPunt = match ? parseInt(match[1]) : null;
-
-        if (numPunt !== null) {
-            if (!localPhotosByPoint[numPunt]) localPhotosByPoint[numPunt] = [];
-            localPhotosByPoint[numPunt].push(URL.createObjectURL(file));
-            associades++;
-        } else {
-            noAssociades++;
-        }
-    });
-
-    refreshMapMarkers();
-    closeAllPanels();
-
-    const statusEl = document.getElementById('local-photos-status');
-    statusEl.classList.remove('hidden');
-    statusEl.innerText = `✅ ${associades} foto(es) associades${noAssociades > 0 ? ` · ${noAssociades} sense punt reconegut` : ''}`;
-
-    if (associades > 0) showNotification(`📁 ${associades} fotos locals carregades`);
-    else showNotification('Cap foto associada — comprova els noms dels fitxers', true);
-
-    event.target.value = '';
-}
 
 window.onload = () => {
     const p = new URLSearchParams(window.location.search);
