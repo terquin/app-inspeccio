@@ -295,6 +295,7 @@ let currentPhotosFiles = [];
 let savedPoints = [];
 let editingPointId = null;
 
+
 let TG_TOKEN   = localStorage.getItem('tg_token')   || '';
 let TG_CHAT_ID = localStorage.getItem('tg_chat_id') || '';
 
@@ -627,6 +628,15 @@ async function savePoint() {
 
     if (!isEdit) savedPoints.push(f);
 
+    // ✅ Guarda els blobs al cache local indexats per punt+foto
+    if (currentPhotosFiles.length > 0) {
+        const baseIdx = f.properties.n_fotos; // índex on comencen les fotos noves
+        currentPhotosFiles.forEach((blob, i) => {
+            const key = `${f.properties.num_punt}_${baseIdx + i}`;
+            localBlobCache[key] = blob;
+        });
+    }
+
     localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
     refreshMapMarkers();
     closeAllPanels();
@@ -650,6 +660,7 @@ async function savePoint() {
         }
     }
 }
+
 
 function refreshMapMarkers() {
     map.eachLayer(l => { if (l instanceof L.Marker && l !== userMarker) map.removeLayer(l); });
@@ -736,7 +747,7 @@ function exportGeoJSONonly() {
 async function exportDataAsZip() {
     if(!savedPoints.length) return;
 
-    // Funció auxiliar: carrega una URL com a blob via canvas (evita CORS)
+    // Intenta obtenir blob de Telegram via canvas si no tenim el blob local
     function urlToBlob(url) {
         return new Promise((resolve) => {
             const img = new Image();
@@ -756,7 +767,6 @@ async function exportDataAsZip() {
         });
     }
 
-    // Funció auxiliar: refresca URL caducada de Telegram via file_id
     async function refreshTelegramUrl(fileId) {
         if (!fileId || !TG_TOKEN) return null;
         try {
@@ -786,23 +796,29 @@ async function exportDataAsZip() {
 
         for (let j = 0; j < urls.length; j++) {
             const nomFitxer = `punt_${f.properties.num_punt}_foto_${j + 1}.jpg`;
-            showNotification(`⬇️ Foto ${j+1} punt #${f.properties.num_punt}...`);
+            const cacheKey  = `${f.properties.num_punt}_${j}`;
 
-            let blob = await urlToBlob(urls[j]);
+            let blob = localBlobCache[cacheKey] || null;
+            const font = blob ? '💾 local' : '⬇️ Telegram';
+            showNotification(`${font} foto ${j+1} punt #${f.properties.num_punt}...`);
 
-            // Si ha fallat, intenta refrescar l'URL via file_id
-            if (!blob && ids[j]) {
-                const newUrl = await refreshTelegramUrl(ids[j]);
-                if (newUrl) blob = await urlToBlob(newUrl);
+            // Si no tenim blob local, intenta des de Telegram
+            if (!blob) {
+                blob = await urlToBlob(urls[j]);
+                // Si ha caducat, refresca via file_id
+                if (!blob && ids[j]) {
+                    const newUrl = await refreshTelegramUrl(ids[j]);
+                    if (newUrl) blob = await urlToBlob(newUrl);
+                }
             }
 
             if (blob) {
                 fotosFolder.file(nomFitxer, blob);
                 f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
             } else {
-                // Fallback: deixa el viewer URL per si de cas
+                // Manté sempre l'enllaç de Telegram com a fallback
                 f.properties[`foto_url_${j + 1}`] = buildViewerUrl(urls[j], ids[j] || '');
-                showNotification(`⚠️ No s'ha pogut incloure foto ${j+1} del punt #${f.properties.num_punt}`, true);
+                showNotification(`⚠️ Foto ${j+1} punt #${f.properties.num_punt} no disponible`, true);
             }
         }
     }
@@ -1083,6 +1099,7 @@ function stopDictation() {
 // contingui el número de punt al nom
 // ─────────────────────────────────────────────────────────────
 let localPhotosByPoint = {}; // { numPunt: [objectURL, ...] }
+let localBlobCache = {};
 
 function importLocalPhotos(event) {
     const files = Array.from(event.target.files);
