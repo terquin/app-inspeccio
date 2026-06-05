@@ -735,9 +735,40 @@ function exportGeoJSONonly() {
 
 async function exportDataAsZip() {
     if(!savedPoints.length) return;
+
+    // Funció auxiliar: carrega una URL com a blob via canvas (evita CORS)
+    function urlToBlob(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                canvas.toBlob(blob => {
+                    canvas.width = 1; canvas.height = 1;
+                    resolve(blob);
+                }, 'image/jpeg', 0.92);
+            };
+            img.onerror = () => resolve(null);
+            img.src = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+        });
+    }
+
+    // Funció auxiliar: refresca URL caducada de Telegram via file_id
+    async function refreshTelegramUrl(fileId) {
+        if (!fileId || !TG_TOKEN) return null;
+        try {
+            const resp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
+            const data = await resp.json();
+            if (data.ok) return `https://api.telegram.org/file/bot${TG_TOKEN}/${data.result.file_path}`;
+        } catch(e) {}
+        return null;
+    }
+
     const zip = new JSZip();
     const fotosFolder = zip.folder("fotos");
-
     showNotification("⏳ Preparant ZIP...");
 
     const feats = JSON.parse(JSON.stringify(savedPoints));
@@ -754,56 +785,38 @@ async function exportDataAsZip() {
         delete f.properties.foto_ids;
 
         for (let j = 0; j < urls.length; j++) {
-            const url = urls[j];
             const nomFitxer = `punt_${f.properties.num_punt}_foto_${j + 1}.jpg`;
+            showNotification(`⬇️ Foto ${j+1} punt #${f.properties.num_punt}...`);
 
-            try {
-                showNotification(`⬇️ Descarregant foto ${j+1} del punt #${f.properties.num_punt}...`);
-                const resp = await fetch(url);
-                if (resp.ok) {
-                    const blob = await resp.blob();
-                    fotosFolder.file(nomFitxer, blob);
-                    // ✅ Ruta relativa dins el ZIP
-                    f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
-                } else {
-                    // Si Telegram ha caducat, intenta refrescar amb file_id
-                    const fid = ids[j];
-                    if (fid && TG_TOKEN) {
-                        const fresResp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fid}`);
-                        const fresData = await fresResp.json();
-                        if (fresData.ok) {
-                            const newUrl = `https://api.telegram.org/file/bot${TG_TOKEN}/${fresData.result.file_path}`;
-                            const resp2 = await fetch(newUrl);
-                            if (resp2.ok) {
-                                const blob2 = await resp2.blob();
-                                fotosFolder.file(nomFitxer, blob2);
-                                f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
-                            } else {
-                                f.properties[`foto_url_${j + 1}`] = url; // fallback URL
-                            }
-                        }
-                    } else {
-                        f.properties[`foto_url_${j + 1}`] = url; // fallback URL
-                    }
-                }
-            } catch(err) {
-                console.warn(`No s'ha pogut descarregar foto ${nomFitxer}:`, err);
-                f.properties[`foto_url_${j + 1}`] = url; // fallback URL
+            let blob = await urlToBlob(urls[j]);
+
+            // Si ha fallat, intenta refrescar l'URL via file_id
+            if (!blob && ids[j]) {
+                const newUrl = await refreshTelegramUrl(ids[j]);
+                if (newUrl) blob = await urlToBlob(newUrl);
+            }
+
+            if (blob) {
+                fotosFolder.file(nomFitxer, blob);
+                f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
+            } else {
+                // Fallback: deixa el viewer URL per si de cas
+                f.properties[`foto_url_${j + 1}`] = buildViewerUrl(urls[j], ids[j] || '');
+                showNotification(`⚠️ No s'ha pogut incloure foto ${j+1} del punt #${f.properties.num_punt}`, true);
             }
         }
     }
 
     zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats), null, 2));
-
     showNotification("📦 Generant ZIP...");
     const c = await zip.generateAsync({ type: "blob" });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(c);
     a.download = `inspeccio_${new Date().getTime()}.zip`;
     a.click();
-    showNotification("✅ ZIP descarregat!");
+    showNotification("✅ ZIP descarregat amb fotos!");
 }
-
+    
 function clearData() { if(confirm("Segur?")) { localStorage.removeItem('inspeccions_qgis'); location.reload(); } }
 
 function importGeoJSON(event) {
