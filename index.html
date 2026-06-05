@@ -285,6 +285,48 @@ document.getElementById('quality-select').addEventListener('change', function() 
     document.getElementById('quality-size-hint').textContent = hints[this.value] || '';
 });
 
+// ==========================================
+// INDEXEDDB SETUP
+// ==========================================
+const DB_NAME = 'InspeccioCampDB';
+const STORE_NAME = 'photos';
+let db;
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject("IndexedDB error");
+        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        request.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+    });
+}
+
+function saveBlobToDB(key, blob) {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject("DB no iniciada");
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        tx.objectStore(STORE_NAME).put(blob, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+function getBlobFromDB(key) {
+    return new Promise((resolve, reject) => {
+        if (!db) return resolve(null);
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const req = tx.objectStore(STORE_NAME).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+    });
+}
+// ==========================================
+
 let map, userMarker, currentLat = null, currentLon = null;
 let currentPhotosFiles = [];   
 let savedPoints = [];
@@ -565,15 +607,7 @@ function locateUser() {
     navigator.geolocation.getCurrentPosition(p=>{ updatePosition(p.coords.latitude,p.coords.longitude); map.flyTo([p.coords.latitude,p.coords.longitude],17); }, null, {enableHighAccuracy:true});
 }
 
-function savePhotoLocally(blob, filename) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-}
-
+// 👉 MODIFICAT: S'ha suprimit la descàrrega automàtica a favor d'IndexedDB
 async function handlePhoto(event) {
     const files = event.target.files;
     if (!files.length) return;
@@ -583,8 +617,6 @@ async function handlePhoto(event) {
     const pc       = document.getElementById('photo-preview-container');
     const statusEl = document.getElementById('photo-status');
     pc.classList.remove('hidden');
-
-    const targetPointNum = getNextPointNumber();
 
     for (let i = 0; i < files.length; i++) {
         statusEl.innerText = `⏳ Comprimint foto ${i + 1}/${files.length}...`;
@@ -597,6 +629,7 @@ async function handlePhoto(event) {
             continue;
         }
 
+        // Es manté a memòria (RAM) fins que guardem el punt
         currentPhotosFiles.push(compressed);
 
         const previewUrl = URL.createObjectURL(compressed);
@@ -605,11 +638,6 @@ async function handlePhoto(event) {
         img.className = "rounded-lg max-h-24 object-cover w-full border";
         img.onload = () => URL.revokeObjectURL(previewUrl);
         pc.appendChild(img);
-
-        const dateString = new Date().toISOString().slice(0,19).replace(/[-T:]/g,"_");
-        const filename = `inspeccio_punt_${targetPointNum}_${dateString}_${i+1}.jpg`;
-        const blobCopy = compressed.slice(0);
-        setTimeout(() => savePhotoLocally(blobCopy, filename), 300 * (i + 1));
     }
 
     const totalKB = currentPhotosFiles.reduce((s, b) => s + b.size, 0) / 1024;
@@ -617,7 +645,7 @@ async function handlePhoto(event) {
     event.target.value = '';
 }
 
-
+// 👉 MODIFICAT: Gestiona el procés de guardat de Blob en IndexedDB
 async function savePoint() {
     if (currentLat===null) { showNotification("GPS?",true); return; }
     const isEdit = editingPointId !== null;
@@ -627,8 +655,10 @@ async function savePoint() {
     let f = isEdit ? savedPoints.find(feat => feat.id === editingPointId) : {
         type:"Feature", id:Date.now().toString(),
         geometry:{type:"Point",coordinates:[currentLon, currentLat]},
-        properties:{ num_punt:getNextPointNumber(), n_fotos:0, foto_urls:[], foto_ids:[] }
+        properties:{ num_punt:getNextPointNumber(), n_fotos:0, foto_urls:[], foto_ids:[], local_keys:[] }
     };
+
+    if (!f.properties.local_keys) f.properties.local_keys = []; // Garantir retrocompatibilitat
 
     f.geometry.coordinates = [currentLon, currentLat];
     f.properties.revisat = revisat;
@@ -638,15 +668,25 @@ async function savePoint() {
     f.properties.notes = document.getElementById('notes').value.trim();
     f.properties.data_hora = new Date().toISOString();
 
+    // 1. Guardar a IndexedDB de manera robusta
+    if (currentPhotosFiles.length > 0) {
+        for (let i = 0; i < currentPhotosFiles.length; i++) {
+            const key = `foto_${f.id}_${Date.now()}_${i}`;
+            await saveBlobToDB(key, currentPhotosFiles[i]);
+            f.properties.local_keys.push(key);
+        }
+    }
+
     if (!isEdit) savedPoints.push(f);
 
     localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
     refreshMapMarkers();
     closeAllPanels();
-    showNotification("✅ Punt desat!");
+    showNotification("✅ Punt i fotos desats localment!");
 
+    // 2. Pujar a Telegram en segon pla (Opcional)
     if (currentPhotosFiles.length > 0 && TG_TOKEN && TG_CHAT_ID) {
-        showNotification("📤 Pujant fotos...");
+        showNotification("📤 Pujant fotos a Telegram...");
         let fotosOk = 0;
         for (let i=0; i<currentPhotosFiles.length; i++) {
             const r = await uploadPhotoToTelegram(currentPhotosFiles[i], f.properties.num_punt, f.properties.n_fotos + 1);
@@ -658,9 +698,13 @@ async function savePoint() {
             }
         }
         if (fotosOk > 0) {
+            f.properties.n_fotos = Math.max(f.properties.foto_urls.length, f.properties.local_keys.length);
             localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
             showNotification(`📎 ${fotosOk} foto(es) pujades`);
         }
+    } else if (currentPhotosFiles.length > 0) {
+        f.properties.n_fotos = Math.max(f.properties.foto_urls.length, f.properties.local_keys.length);
+        localStorage.setItem('inspeccions_qgis', JSON.stringify(savedPoints));
     }
 }
 
@@ -720,8 +764,12 @@ function exportGeoJSONonly() {
 
         const urls  = f.properties.foto_urls || [];
         const ids   = f.properties.foto_ids  || [];
+        
+        // Purgar els camps interns no processables pel QGIS
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
+        delete f.properties.local_keys;
+
         urls.forEach((url, idx) => {
             f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
         });
@@ -730,26 +778,58 @@ function exportGeoJSONonly() {
     const a = document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`insp_${new Date().getTime()}.geojson`; a.click();
 }
 
+// 👉 MODIFICAT: Agafa els blobs exclusivament d'IndexedDB en lloc d'ofegar la memòria
 async function exportDataAsZip() {
     if(!savedPoints.length) return;
     const zip = new JSZip();
+    const fotosFolder = zip.folder("fotos");
     const feats = JSON.parse(JSON.stringify(savedPoints));
-    feats.forEach((f, i) => {
+
+    showNotification("⏳ Empaquetant dades i fotos...");
+
+    for (let i = 0; i < feats.length; i++) {
+        const f = feats[i];
         f.id = parseInt(f.properties.num_punt) || (i + 1);
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
 
         const urls  = f.properties.foto_urls || [];
         const ids   = f.properties.foto_ids  || [];
+        const keys  = f.properties.local_keys || [];
+        
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
-        urls.forEach((url, idx) => {
-            f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
-        });
-    });
-    zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats)));
+        delete f.properties.local_keys;
+
+        // Treballem pel màxim nombre de fotos detectat (les de Telegram o les Locals)
+        const numFotos = Math.max(urls.length, keys.length);
+        
+        for (let j = 0; j < numFotos; j++) {
+            const nomFitxer = `punt_${f.properties.num_punt}_foto_${j + 1}.jpg`;
+            let blob = null;
+
+            // Llegir sempre d'IndexedDB en prioritat (Qualitat d'origen, molt ràpid)
+            if (keys[j]) {
+                blob = await getBlobFromDB(keys[j]);
+            }
+
+            if (blob) {
+                fotosFolder.file(nomFitxer, blob);
+                f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
+            } else if (urls[j]) {
+                // Fallback, si vas netejar la memòria cau, posarà l'enllaç del Viewer al GeoJSON
+                f.properties[`foto_url_${j + 1}`] = buildViewerUrl(urls[j], ids[j] || '');
+            }
+        }
+    }
+    
+    zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats), null, 2));
     const c = await zip.generateAsync({type:"blob"});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(c); a.download=`insp_${new Date().getTime()}.zip`; a.click();
+    const a = document.createElement('a'); 
+    a.href=URL.createObjectURL(c); 
+    a.download=`inspeccio_${new Date().getTime()}.zip`; 
+    a.click();
+    showNotification("✅ ZIP descarregat!");
 }
 
 function clearData() { if(confirm("Segur?")) { localStorage.removeItem('inspeccions_qgis'); location.reload(); } }
@@ -1037,10 +1117,13 @@ function stopDictation() {
     if (btn) btn.classList.remove('mic-recording');
 }
 
-window.onload = () => {
+// 👉 MODIFICAT: S'assegura que la inicialització sigui asíncrona per suportar IndexedDB
+window.onload = async () => {
     const p = new URLSearchParams(window.location.search);
     const viewImg = p.get('view_img');
     const fileId  = p.get('file_id');
+
+    await initDB();
 
     initMap();
     if (!TG_TOKEN) setTimeout(openTelegramModal, 600);
