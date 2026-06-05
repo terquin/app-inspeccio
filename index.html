@@ -736,23 +736,72 @@ function exportGeoJSONonly() {
 async function exportDataAsZip() {
     if(!savedPoints.length) return;
     const zip = new JSZip();
+    const fotosFolder = zip.folder("fotos");
+
+    showNotification("⏳ Preparant ZIP...");
+
     const feats = JSON.parse(JSON.stringify(savedPoints));
-    feats.forEach((f, i) => {
+
+    for (let i = 0; i < feats.length; i++) {
+        const f = feats[i];
         f.id = parseInt(f.properties.num_punt) || (i + 1);
         const utm = wgs84ToUtm31(f.geometry.coordinates[0], f.geometry.coordinates[1]);
         f.geometry.coordinates = [utm.x, utm.y];
 
-        const urls  = f.properties.foto_urls || [];
-        const ids   = f.properties.foto_ids  || [];
+        const urls = f.properties.foto_urls || [];
+        const ids  = f.properties.foto_ids  || [];
         delete f.properties.foto_urls;
         delete f.properties.foto_ids;
-        urls.forEach((url, idx) => {
-            f.properties[`foto_url_${idx + 1}`] = buildViewerUrl(url, ids[idx] || '');
-        });
-    });
-    zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats)));
-    const c = await zip.generateAsync({type:"blob"});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(c); a.download=`insp_${new Date().getTime()}.zip`; a.click();
+
+        for (let j = 0; j < urls.length; j++) {
+            const url = urls[j];
+            const nomFitxer = `punt_${f.properties.num_punt}_foto_${j + 1}.jpg`;
+
+            try {
+                showNotification(`⬇️ Descarregant foto ${j+1} del punt #${f.properties.num_punt}...`);
+                const resp = await fetch(url);
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    fotosFolder.file(nomFitxer, blob);
+                    // ✅ Ruta relativa dins el ZIP
+                    f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
+                } else {
+                    // Si Telegram ha caducat, intenta refrescar amb file_id
+                    const fid = ids[j];
+                    if (fid && TG_TOKEN) {
+                        const fresResp = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fid}`);
+                        const fresData = await fresResp.json();
+                        if (fresData.ok) {
+                            const newUrl = `https://api.telegram.org/file/bot${TG_TOKEN}/${fresData.result.file_path}`;
+                            const resp2 = await fetch(newUrl);
+                            if (resp2.ok) {
+                                const blob2 = await resp2.blob();
+                                fotosFolder.file(nomFitxer, blob2);
+                                f.properties[`foto_url_${j + 1}`] = `fotos/${nomFitxer}`;
+                            } else {
+                                f.properties[`foto_url_${j + 1}`] = url; // fallback URL
+                            }
+                        }
+                    } else {
+                        f.properties[`foto_url_${j + 1}`] = url; // fallback URL
+                    }
+                }
+            } catch(err) {
+                console.warn(`No s'ha pogut descarregar foto ${nomFitxer}:`, err);
+                f.properties[`foto_url_${j + 1}`] = url; // fallback URL
+            }
+        }
+    }
+
+    zip.file("mapa.geojson", JSON.stringify(buildGeoJSONExport(feats), null, 2));
+
+    showNotification("📦 Generant ZIP...");
+    const c = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(c);
+    a.download = `inspeccio_${new Date().getTime()}.zip`;
+    a.click();
+    showNotification("✅ ZIP descarregat!");
 }
 
 function clearData() { if(confirm("Segur?")) { localStorage.removeItem('inspeccions_qgis'); location.reload(); } }
